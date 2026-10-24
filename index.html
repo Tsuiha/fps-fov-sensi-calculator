@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FPS視野角と感度計算機</title>
+  <meta name="description" content="FPSの視野角(FOV)、アスペクト比、ADS倍率、モニターディスタンス(MD%)感度変換を高精度に検証できるWebアプリ。">
+  <link rel="stylesheet" href="css/style.css?v=44">
+  <link rel="stylesheet" href="css/docs.css?v=2">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+</head>
+<body>
+
+  <!-- App Header (極小 42px・タイトル左上・フラット大タブ) -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-icon-sm">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" stroke="#080a0f" stroke-width="2" fill="none"/>
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#080a0f" stroke-width="2"/>
+        </svg>
+      </div>
+      <span class="logo-title-sm">FPS視野角と感度計算機</span>
+    </div>
+
+    <!-- フラット大タブ群 -->
+    <nav class="header-nav">
+      <button class="nav-btn active" data-tab="tab-sim-hip" id="navSimHipBtn">
+        <span>👥</span> FOVシミュレーター (Hipfire)
+      </button>
+      <button class="nav-btn" data-tab="tab-sim-ads" id="navSimAdsBtn">
+        <span>🔍</span> FOVシミュレーター (ADS)
+      </button>
+      <button class="nav-btn" data-tab="tab-valorant" id="navValorantBtn">
+        <span>🎯</span> VALORANT
+      </button>
+      <button class="nav-btn" data-tab="tab-guide" id="navGuideBtn">
+        <span>📖</span> ドキュメント
+      </button>
+    </nav>
+
+    <!-- テーマ切り替えボタン (Dark / Light) -->
+    <div class="header-right">
+      <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="テーマ切り替え" title="ダーク / ライトモード切り替え">
+        <span class="theme-toggle-icon" id="themeToggleIcon">☀️</span>
+        <span class="theme-toggle-label" id="themeToggleLabel">Light</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 100vh ノースクロール メイン領域 -->
+  <main class="app-main">
+
+    <!-- ====================================================================
+         大タブ 1: FOVシミュレーター (Hipfire比較)
+         左: 設定(共通 + 画面A + 画面B) | 中央: 俯瞰画面 | 右: 画面A & 画面B (上下2段)
+         ==================================================================== -->
+    <!-- ====================================================================
+         大タブ 1: FOVシミュレーター (Hipfire比較)
+         4フレーム (2x2) レイアウト:
+         [左上] 設定＆FOVリアルタイム変換 | [右上] 画面 A
+         [左下] 俯瞰シミュレーター        | [右下] 画面 B
+         ==================================================================== -->
+    <section id="tab-sim-hip" class="tab-content active">
+      <div class="sim-4frame-layout">
+        
+        <!-- [左上 1/4] 設定 ＆ FOV相互変換フレーム -->
+        <div class="frame-box frame-settings">
+          <div class="frame-header-sm">
+            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+              <span style="white-space: nowrap;">⚙️ 設定 ＆ 変換</span>
+              <span class="header-stat-pill">比率: <strong id="statHipSizeRatio" style="color: var(--cyan);">1.05x</strong> | 索敵差: <strong id="statHipAngleDiff" style="color: var(--yellow);">-3.3°</strong></span>
+            </div>
+            <div class="header-ar-group">
+              <span class="header-ar-label">モニターアスペクト比：</span>
+              <button class="aspect-btn-sm active" data-aspect="16:9">16:9</button>
+              <button class="aspect-btn-sm" data-aspect="4:3">4:3</button>
+              <button class="aspect-btn-sm" data-aspect="1:1">1:1</button>
+              <button class="aspect-btn-sm" data-aspect="21:9">21:9</button>
+            </div>
+          </div>
+          
+          <div class="settings-content-grid">
+            <!-- 画面 A 入力 & 変換後FOV行 -->
+            <div class="fov-pair-row fov-pair-a">
+              <div class="fov-input-col">
+                <div class="fov-card-title" style="color: var(--cyan);">
+                  <span>【変換前 設定】</span>
+                  <span id="hipActualFovBadgeA" class="fov-badge-pill">実効 106.3°</span>
+                </div>
+                <div class="fov-input-controls">
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">基準比率</span>
+                    <select id="hipBaseArA" class="form-select-sm">
+                      <option value="1:1">1:1(vFOV, BF)</option>
+                      <option value="4:3">4:3(CS)</option>
+                      <option value="4:3_apex" selected>4:3カスタム(Apex)</option>
+                      <option value="16:9">16:9(Valorant, OW)</option>
+                      <option value="21:9">21:9(ワイド)</option>
+                    </select>
+                  </div>
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">設定FOV</span>
+                    <div class="fov-slider-wrap">
+                      <input type="number" id="numFovA" class="fov-num-input" min="1" max="180" step="0.01" value="90.00" title="FOV直接入力 (小数点2桁対応)">
+                      <input type="range" id="sliderFovA" min="55" max="120" step="1" value="90">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 矢印コネクタ -->
+              <div class="fov-arrow-connector">➔</div>
+
+              <!-- 変換後FOVスタック (vFOV(1:1), hFOV(4:3), hFOV(16:9)) -->
+              <div class="fov-converted-col">
+                <div class="conv-item" id="convRowVfovA">
+                  <span class="conv-label">vFOV (1:1)</span>
+                  <strong class="conv-val" id="convVfovA">73.7°</strong>
+                </div>
+                <div class="conv-item" id="convRowHfov43A">
+                  <span class="conv-label">hFOV (4:3)</span>
+                  <strong class="conv-val" id="convHfov43A">90.0°</strong>
+                </div>
+                <div class="conv-item active-ar" id="convRowHfov169A">
+                  <span class="conv-label">hFOV (16:9)</span>
+                  <strong class="conv-val" id="convHfov169A">106.3°</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- 画面 B 入力 & 変換後FOV行 -->
+            <div class="fov-pair-row fov-pair-b">
+              <div class="fov-input-col">
+                <div class="fov-card-title" style="color: var(--yellow);">
+                  <span>【変換後 設定】</span>
+                  <span id="hipActualFovBadgeB" class="fov-badge-pill" style="color: var(--yellow); border-color: rgba(255, 208, 0, 0.4);">実効 103.0°</span>
+                </div>
+                <div class="fov-input-controls">
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">基準比率</span>
+                    <select id="hipBaseArB" class="form-select-sm">
+                      <option value="1:1">1:1(vFOV, BF)</option>
+                      <option value="4:3">4:3(CS)</option>
+                      <option value="4:3_apex">4:3カスタム(Apex)</option>
+                      <option value="16:9" selected>16:9(Valorant, OW)</option>
+                      <option value="21:9">21:9(ワイド)</option>
+                    </select>
+                  </div>
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">設定FOV</span>
+                    <div class="fov-slider-wrap">
+                      <input type="number" id="numFovB" class="fov-num-input" min="1" max="180" step="0.01" value="103.00" title="FOV直接入力 (小数点2桁対応)">
+                      <input type="range" id="sliderFovB" min="55" max="120" step="1" value="103">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 矢印コネクタ -->
+              <div class="fov-arrow-connector" style="color: var(--yellow);">➔</div>
+
+              <!-- 変換後FOVスタック (vFOV(1:1), hFOV(4:3), hFOV(16:9)) -->
+              <div class="fov-converted-col">
+                <div class="conv-item" id="convRowVfovB">
+                  <span class="conv-label">vFOV (1:1)</span>
+                  <strong class="conv-val" id="convVfovB">70.5°</strong>
+                </div>
+                <div class="conv-item" id="convRowHfov43B">
+                  <span class="conv-label">hFOV (4:3)</span>
+                  <strong class="conv-val" id="convHfov43B">86.6°</strong>
+                </div>
+                <div class="conv-item active-ar" id="convRowHfov169B">
+                  <span class="conv-label">hFOV (16:9)</span>
+                  <strong class="conv-val" id="convHfov169B">103.0°</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- [3段目] MD%感度変換行 (Sensitivity Converter by Monitordistance) -->
+            <div class="fov-pair-row fov-pair-md">
+              <div class="fov-input-col">
+                <div class="fov-card-title" style="color: #c084fc;">
+                  <span>【MD% 感度変換】</span>
+                  <span id="hipMdBadge" class="fov-badge-pill" style="color: #c084fc; border-color: rgba(192, 132, 252, 0.4);">16:9画面端 (100%)</span>
+                </div>
+                <div class="fov-input-controls">
+                  <!-- 変換MD% 数値入力 & スライダー -->
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">変換MD%</span>
+                    <div class="fov-slider-wrap">
+                      <input type="number" id="hipMdInput" class="fov-num-input" min="0" max="200" step="1" value="100" title="変換MD% (0%〜200%)">
+                      <input type="range" id="hipMdSlider" min="0" max="200" step="1" value="100">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 矢印コネクタ -->
+              <div class="fov-arrow-connector" style="color: #c084fc;">➔</div>
+
+              <!-- 変換倍率スタック (振り向き倍率、感度倍率) -->
+              <div class="fov-converted-col hip-md-result-col">
+                <div class="conv-item active-ar" id="convRowHurimukiMult">
+                  <div class="conv-label-wrap">
+                    <span class="conv-label">振り向き倍率</span>
+                    <span class="conv-example-tag" id="hipHurimukiEx">（例：20cm → 20.49 cm）</span>
+                  </div>
+                  <strong class="conv-val" id="hipHurimukiMult" style="color: #c084fc;">1.000x</strong>
+                </div>
+                <div class="conv-item" id="convRowSensMult">
+                  <div class="conv-label-wrap">
+                    <span class="conv-label">感度倍率</span>
+                    <span class="conv-example-tag" id="hipSensEx">（例：1.0 → 1.000）</span>
+                  </div>
+                  <strong class="conv-val" id="hipSensMult" style="color: var(--cyan);">1.000x</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- [4段目] クリエイターMODギア ウィジェット (横幅半分 ＆ 残り縦幅全域活用) -->
+            <div class="ad-widget-banner" style="width: calc(50% - 3px); flex: 1; min-height: 44px; display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; overflow: hidden; align-self: flex-start;">
+              <div class="ad-widget-img-wrap" style="height: 100%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <img src="assets/DSC00713.jpg"
+                     alt="SQueeze-OP1"
+                     class="ad-widget-img"
+                     style="height: 100%; max-height: 140px; width: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.15); display: block;"
+                     onerror="this.onerror=null; this.src='https://tsuiha.com/wp-content/uploads/2026/09/DSC00713.jpg';">
+              </div>
+              <div class="ad-widget-content" style="height: 100%; min-width: 0; flex: 1;">
+                <div class="ad-widget-text-group" style="display: flex; flex-direction: column; gap: 1px;">
+                  <span class="ad-widget-title" style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); white-space: nowrap; font-family: 'JetBrains Mono', monospace, sans-serif; letter-spacing: 0.02em;">SQueeze-OP1</span>
+                  <span class="ad-widget-subtitle" style="font-size: 0.68rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; letter-spacing: 0.01em;">OP1 8K v2 MODマウス</span>
+                </div>
+                <div class="ad-widget-links" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  <a href="https://tsuihajp.booth.pm/items/8790547" target="_blank" rel="noopener noreferrer" class="ad-link-btn ad-link-booth" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.70rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-decoration: none; background: #fc4d50; color: #ffffff; white-space: nowrap;" title="BOOTH で見る">
+                    <span>BOOTH</span>
+                    <span class="ad-link-arrow">↗</span>
+                  </a>
+                  <a href="https://cults3d.com/ja/dezain-korekushon/TsuihaJP/squeeze-op1" target="_blank" rel="noopener noreferrer" class="ad-link-btn ad-link-cults" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.70rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-decoration: none; background: #9333ea; color: #ffffff; white-space: nowrap;" title="Cults 3D で見る">
+                    <span>Cults 3D</span>
+                    <span class="ad-link-arrow">↗</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- [右上 2/4] 画面 A (3D Sim) -->
+        <div class="frame-box">
+          <div class="frame-header-sm">
+            <span class="screen-box-title" style="color: var(--cyan);">【変換前】</span>
+            <span class="logo-badge-sm" id="badgeFovA">実効FOV: 106.3° (16:9換算)</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasHipA"></canvas>
+          </div>
+        </div>
+
+        <!-- [左下 3/4] 俯瞰画面 (Top-Down View / 50%高) -->
+        <div class="frame-box">
+          <div class="frame-header-sm">
+            <span class="screen-box-title">俯瞰 (Top-Down Camera Cone)</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="topDownCanvasHip"></canvas>
+          </div>
+        </div>
+
+        <!-- [右下 4/4] 画面 B (3D Sim) -->
+        <div class="frame-box">
+          <div class="frame-header-sm">
+            <span class="screen-box-title" style="color: var(--yellow);">【変換後】</span>
+            <span class="logo-badge-sm" id="badgeFovB" style="color: var(--yellow); border-color: rgba(255, 208, 0, 0.4);">実効FOV: 103.0° (16:9換算)</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasHipB"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         大タブ 2: FOVシミュレーター (ADSズーム比較)
+         4フレーム (2x2) レイアウト:
+         [左上] 設定＆ADS FOVリアルタイム変換 | [右上] Hipfire画面
+         [左下] 俯瞰ズームコーン              | [右下] ADS画面
+         ==================================================================== -->
+    <section id="tab-sim-ads" class="tab-content">
+      <div class="sim-4frame-layout">
+        
+        <!-- [左上 1/4] 設定 ＆ ADS FOVリアルタイム変換 -->
+        <div class="frame-box frame-settings">
+          <div class="frame-header-sm">
+            <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+              <span style="white-space: nowrap;">⚙️ ADS設定 ＆ 変換</span>
+              <span class="header-stat-pill">倍率: <strong id="statAdsZoomRatio" style="color: var(--pink);">2.00x</strong> | 標的拡大: <strong id="statAdsApparentRatio" style="color: var(--cyan);">2.00x</strong> | 画角: <strong id="statAdsFovVal" style="color: var(--pink);">53.1°</strong></span>
+            </div>
+          </div>
+          
+          <div class="settings-content-grid">
+            <!-- Hipfire設定 & 変換後FOV行 -->
+            <div class="fov-pair-row fov-pair-a">
+              <div class="fov-input-col">
+                <div class="fov-card-title" style="color: var(--cyan);">
+                  <span>【Hipfire 設定】</span>
+                  <span id="adsHipActualBadge" class="fov-badge-pill">実効 103.00°</span>
+                </div>
+                <div class="fov-input-controls">
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">基準比率</span>
+                    <select id="adsHipBaseAr" class="form-select-sm">
+                      <option value="1:1">1:1(vFOV, BF)</option>
+                      <option value="4:3">4:3(CS)</option>
+                      <option value="4:3_apex">4:3カスタム(Apex)</option>
+                      <option value="16:9" selected>16:9(Valorant, OW)</option>
+                      <option value="21:9">21:9(ワイド)</option>
+                    </select>
+                  </div>
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">Hipfire FOV</span>
+                    <div class="fov-slider-wrap">
+                      <input type="number" id="numBaseHipFov" class="fov-num-input" min="1" max="180" step="0.01" value="103.00" title="Hipfire FOV直接入力 (小数点2桁対応)">
+                      <input type="range" id="sliderBaseHipFov" min="55" max="120" step="1" value="103">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 矢印コネクタ -->
+              <div class="fov-arrow-connector">➔</div>
+
+              <!-- 変換後FOVスタック -->
+              <div class="fov-converted-col">
+                <div class="conv-item" id="convRowVfovAdsHip">
+                  <span class="conv-label">vFOV (1:1)</span>
+                  <strong class="conv-val" id="convVfovAdsHip">70.53°</strong>
+                </div>
+                <div class="conv-item" id="convRowHfov43AdsHip">
+                  <span class="conv-label">hFOV (4:3)</span>
+                  <strong class="conv-val" id="convHfov43AdsHip">86.63°</strong>
+                </div>
+                <div class="conv-item active-ar" id="convRowHfov169AdsHip">
+                  <span class="conv-label">hFOV (16:9)</span>
+                  <strong class="conv-val" id="convHfov169AdsHip">103.00°</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- ADS ズーム設定 & 変換後FOV行 -->
+            <div class="fov-pair-row fov-pair-ads-zoom">
+              <div class="fov-input-col">
+                <div class="fov-card-title" style="color: var(--pink);">
+                  <span>【ADS ズーム設定】</span>
+                  <span id="adsZoomActualBadge" class="fov-badge-pill" style="color: var(--pink); border-color: rgba(255, 0, 128, 0.4);">実効 53.13°</span>
+                </div>
+                <div class="fov-input-controls">
+                  <!-- ズーム計算方式の選択 -->
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">ズーム方式</span>
+                    <select id="adsCalcMode" class="form-select-sm" style="font-weight: 600; color: var(--pink); border-color: rgba(255, 0, 128, 0.4);">
+                      <option value="optical" selected>光学倍率(画面基準, BFV)</option>
+                      <option value="valorant">視野角倍率(16:9hfov, valorant)</option>
+                      <option value="hfov_4_3">視野角倍率(4:3hfov)</option>
+                      <option value="vfov">視野角倍率(vfov)</option>
+                      <option value="apex">Apex方式 (4:3カスタム)</option>
+                    </select>
+                  </div>
+
+                  <!-- プリセットボタン (方式に応じて動的切り替え) -->
+                  <div class="fov-input-line fov-presets-line">
+                    <span class="fov-line-label">プリセット</span>
+                    <div id="adsPresetsContainer" class="ads-presets-grid">
+                      <!-- JSで動的にボタン生成 -->
+                    </div>
+                  </div>
+
+                  <!-- ズーム倍率スライダー＆数値入力 -->
+                  <div class="fov-input-line">
+                    <span class="fov-line-label">ズーム倍率</span>
+                    <div class="fov-slider-wrap">
+                      <input type="number" id="numAdsZoom" class="fov-num-input" min="1.0" max="10.0" step="0.01" value="2.00" title="ズーム倍率直接入力 (小数点2桁対応)">
+                      <input type="range" id="sliderAdsZoom" min="1.1" max="8.0" step="0.01" value="2.0">
+                    </div>
+                  </div>
+
+                  <!-- 方式に応じた数式・解説ミニバナー (一旦非表示) -->
+                  <div id="adsModeDesc" class="ads-mode-desc-box" style="display: none;">
+                    <!-- JSで動的更新 -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- 矢印コネクタ -->
+              <div class="fov-arrow-connector" style="color: var(--pink);">➔</div>
+
+              <!-- 変換後FOVスタック -->
+              <div class="fov-converted-col">
+                <div class="conv-item" id="convRowVfovAdsZoom">
+                  <span class="conv-label">vFOV (1:1)</span>
+                  <strong class="conv-val" id="convVfovAdsZoom">37.85°</strong>
+                </div>
+                <div class="conv-item" id="convRowHfov43AdsZoom">
+                  <span class="conv-label">hFOV (4:3)</span>
+                  <strong class="conv-val" id="convHfov43AdsZoom">48.91°</strong>
+                </div>
+                <div class="conv-item active-ar" id="convRowHfov169AdsZoom">
+                  <span class="conv-label">hFOV (16:9)</span>
+                  <strong class="conv-val" id="convHfov169AdsZoom">53.13°</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- [3段目] ADS感度倍率 計算行 (Sensitivity Converter by Monitordistance - ADS) -->
+            <div class="fov-pair-row fov-pair-ads-md">
+              <div class="fov-input-col">
+                <div class="fov-card-title" style="color: #c084fc;">
+                  <span>【ADS感度倍率】</span>
+                  <span id="adsMdBadge" class="fov-badge-pill" style="color: #c084fc; border-color: rgba(192, 132, 252, 0.4);">16:9端 (100%)</span>
+                </div>
+                <div class="fov-input-controls">
+                  <!-- 変換前MD% 数値入力 & スライダー -->
+                  <div class="fov-input-line">
+                    <span class="fov-line-label" title="変換前 (ゲーム採用) MD%">変換前MD%</span>
+                    <div class="fov-slider-wrap">
+                      <input type="number" id="adsGameMdInput" class="fov-num-input" min="0" max="200" step="1" value="0" title="変換前MD% (直接入力)">
+                      <input type="range" id="adsGameMdSlider" min="0" max="200" step="1" value="0">
+                    </div>
+                  </div>
+                  <!-- 変換後MD% 数値入力 & スライダー -->
+                  <div class="fov-input-line">
+                    <span class="fov-line-label" title="変換後 (ターゲット) MD%">変換後MD%</span>
+                    <div class="fov-slider-wrap">
+                      <input type="number" id="adsTargetMdInput" class="fov-num-input" min="0" max="200" step="1" value="100" title="変換後MD% (0%〜200%)">
+                      <input type="range" id="adsTargetMdSlider" min="0" max="200" step="1" value="100">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 矢印コネクタ -->
+              <div class="fov-arrow-connector" style="color: #c084fc;">➔</div>
+
+              <!-- ADS感度倍率 単独結果表示 -->
+              <div class="fov-converted-col ads-md-result-col">
+                <div class="ads-sens-card" id="convRowAdsSensMult">
+                  <div class="ads-sens-header">
+                    <span class="ads-sens-title">ADS感度倍率</span>
+                    <strong class="ads-sens-number" id="adsSensMult">1.159x</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- [右上 2/4] Hipfire画面 (3D Sim) -->
+        <div class="frame-box">
+          <div class="frame-header-sm">
+            <span class="screen-box-title" style="color: var(--cyan);">【Hipfire】</span>
+            <span class="logo-badge-sm" id="badgeAdsHip">実効FOV: 103.0° (16:9換算)</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasAdsHip"></canvas>
+          </div>
+        </div>
+
+        <!-- [左下 3/4] 俯瞰画面 (Top-Down Zoom Cone / 50%高) -->
+        <div class="frame-box">
+          <div class="frame-header-sm">
+            <span class="screen-box-title">俯瞰 (Top-Down Zoom Cone)</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="topDownCanvasAds"></canvas>
+          </div>
+        </div>
+
+        <!-- [右下 4/4] ADS画面 (3D Sim) -->
+        <div class="frame-box">
+          <div class="frame-header-sm">
+            <span class="screen-box-title" style="color: var(--pink);">【ADS画面】スコープ / ズーム</span>
+            <span class="logo-badge-sm" id="badgeAdsZoom" style="color: var(--pink); border-color: rgba(255, 0, 127, 0.4);">実効FOV: 53.1° (2.0x)</span>
+          </div>
+          <div class="canvas-container">
+            <canvas id="canvasAdsZoom"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+
+    <!-- ====================================================================
+         大タブ: VALORANT専用 最適化計算機 (100vh ノースクロール 左右50:50分割)
+         ==================================================================== -->
+    <section id="tab-valorant" class="tab-content">
+      <div class="valo-dashboard-layout">
+        
+        <!-- 上段: 順引き (現在の設定 ➔ 全スコープ実効MD%と振り向きを解析) -->
+        <div class="valo-section valo-section-forward">
+          <div class="valo-section-header">
+            <span class="valo-section-title">感度設定を入力→感度仕様を出力</span>
+            <span class="valo-header-pill">16:9 HFOV 103° 固定</span>
+          </div>
+
+          <div class="valo-row-layout">
+            <!-- 左: 入力パネル (50%幅) -->
+            <div class="valo-panel-half">
+              <div class="valo-input-card">
+                <div class="valo-card-title-row">
+                  <span class="valo-card-title">🎮 ゲーム内設定の入力</span>
+                </div>
+                
+                <!-- 縦4段設定: DPI -> 感度:照準 -> スコープ感度倍率 -> ADS感度マルチプライヤー -->
+                <div class="valo-field-group">
+                  <span class="valo-label">DPI</span>
+                  <div class="valo-control-row">
+                    <input type="number" id="valoFwdDpi" class="form-input-sm valo-input-uniform" value="800" min="100" max="64000" step="50">
+                    <div class="valo-btn-group">
+                      <button type="button" class="valo-preset-btn valo-fwd-dpi-btn" data-dpi="400">400</button>
+                      <button type="button" class="valo-preset-btn valo-fwd-dpi-btn active" data-dpi="800">800</button>
+                      <button type="button" class="valo-preset-btn valo-fwd-dpi-btn" data-dpi="1600">1600</button>
+                      <button type="button" class="valo-preset-btn valo-fwd-dpi-btn" data-dpi="3200">3200</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="valo-field-group">
+                  <span class="valo-label">感度:照準</span>
+                  <div class="valo-control-row">
+                    <input type="number" id="valoFwdSensNum" class="form-input-sm valo-input-uniform" value="0.350" min="0.01" max="5.0" step="0.001">
+                    <input type="range" id="valoFwdSens" min="0.05" max="1.5" step="0.01" value="0.35" class="form-range-sm valo-slider-flex">
+                  </div>
+                </div>
+
+                <div class="valo-field-group">
+                  <span class="valo-label">スコープ感度倍率（SR)</span>
+                  <div class="valo-control-row">
+                    <input type="number" id="valoFwdScopeMultNum" class="form-input-sm valo-input-uniform" value="1.000" min="0.1" max="3.0" step="0.001">
+                    <input type="range" id="valoFwdScopeMult" min="0.6" max="1.1" step="0.01" value="1.0" class="form-range-sm valo-slider-flex">
+                  </div>
+                </div>
+
+                <div class="valo-field-group">
+                  <span class="valo-label">ADS感度マルチプライヤー（SMG, AR)</span>
+                  <div class="valo-control-row">
+                    <input type="number" id="valoFwdAdsMultNum" class="form-input-sm valo-input-uniform" value="1.000" min="0.1" max="3.0" step="0.001">
+                    <input type="range" id="valoFwdAdsMult" min="0.6" max="1.1" step="0.01" value="1.0" class="form-range-sm valo-slider-flex">
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 中央コネクター (矢印) -->
+            <div class="valo-connector">
+              <div class="valo-connector-arrow">➔</div>
+            </div>
+
+            <!-- 右: 順引き結果パネル (50%幅) -->
+            <div class="valo-panel-half">
+              <div class="valo-table-card valo-result-card">
+                <!-- 上段: 腰だめ基本ステータス (縦3段: eDPI、振り向き(180°)、360°回転距離) -->
+                <div class="valo-fwd-outputs-vertical">
+                  <!-- 1. eDPI (照準) -->
+                  <div class="valo-rev-out-row">
+                    <span class="valo-rev-out-label">eDPI (照準)</span>
+                    <span id="valoFwdEdpi" class="valo-rev-out-val">280.0</span>
+                  </div>
+
+                  <!-- 2. 振り向き (180°) -->
+                  <div class="valo-rev-out-row">
+                    <span class="valo-rev-out-label valo-label-cyan">振り向き (180°)</span>
+                    <span id="valoFwdHurimuki" class="valo-rev-out-val valo-val-cyan">23.33 cm</span>
+                  </div>
+
+                  <!-- 3. 360°回転距離 -->
+                  <div class="valo-rev-out-row">
+                    <span class="valo-rev-out-label">360°回転距離</span>
+                    <span id="valoFwdCm360" class="valo-rev-out-val">46.65 cm</span>
+                  </div>
+                </div>
+
+                <!-- 下段: 各倍率の計算結果テーブル（全幅） -->
+                <div class="valo-table-wrap valo-rev-table-wrap">
+                  <table class="valo-calc-table valo-rev-calc-table">
+                    <thead>
+                      <tr>
+                        <th class="valo-th-weapon">武器 / スコープ</th>
+                        <th class="valo-th-zoom">倍率</th>
+                        <th class="valo-th-fov">16:9 FOV</th>
+                        <th class="valo-th-hurimuki">振り向き (180°)</th>
+                        <th class="valo-th-md" title="フリック感覚一致距離%">フリック感覚一致距離%</th>
+                      </tr>
+                    </thead>
+                    <tbody id="valoFwdTableBody">
+                      <tr class="valo-row-even">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">SMG / LMG</span></td>
+                        <td class="valo-col-zoom"><strong>1.15x</strong></td>
+                        <td class="valo-col-fov">89.6°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">26.83 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-odd">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Vandal/Phantom</span></td>
+                        <td class="valo-col-zoom"><strong>1.25x</strong></td>
+                        <td class="valo-col-fov">82.4°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">29.16 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-even">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Guardian</span></td>
+                        <td class="valo-col-zoom"><strong>1.50x</strong></td>
+                        <td class="valo-col-fov">68.7°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">34.99 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-odd">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Warden</span></td>
+                        <td class="valo-col-zoom"><strong>2.00x</strong></td>
+                        <td class="valo-col-fov">51.5°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">46.65 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-even">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Operator 1</span></td>
+                        <td class="valo-col-zoom"><strong>2.50x</strong></td>
+                        <td class="valo-col-fov">41.2°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">58.32 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-odd">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Marshal / Outlaw</span></td>
+                        <td class="valo-col-zoom"><strong>3.50x</strong></td>
+                        <td class="valo-col-fov">29.4°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">81.64 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-even">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Operator 2</span></td>
+                        <td class="valo-col-zoom"><strong>5.00x</strong></td>
+                        <td class="valo-col-fov">20.6°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">116.63 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 下段: 逆引き (希望の振り向き ＆ 目標MD% ➔ ゲーム内設定値を算出) -->
+        <div class="valo-section valo-section-reverse">
+          <div class="valo-section-header">
+            <span class="valo-section-title">ターゲット仕様を入力→設定感度を出力</span>
+            <span class="valo-header-pill">1画面最適チューニング</span>
+          </div>
+
+          <div class="valo-row-layout">
+            <!-- 左: 逆引き入力パネル (50%幅) -->
+            <div class="valo-panel-half">
+              <div class="valo-input-card">
+                <div class="valo-card-title-row">
+                  <span class="valo-card-title">🎯 理想の目標設定を入力</span>
+                </div>
+
+                <!-- 1段目: マウスDPI -->
+                <div class="valo-field-group">
+                  <span class="valo-label">マウスDPI</span>
+                  <div class="valo-control-row">
+                    <input type="number" id="valoRevDpi" class="form-input-sm valo-input-uniform" value="800" min="100" max="64000" step="50">
+                    <div class="valo-btn-group">
+                      <button type="button" class="valo-preset-btn valo-rev-dpi-btn" data-dpi="400">400</button>
+                      <button type="button" class="valo-preset-btn valo-rev-dpi-btn active" data-dpi="800">800</button>
+                      <button type="button" class="valo-preset-btn valo-rev-dpi-btn" data-dpi="1600">1600</button>
+                      <button type="button" class="valo-preset-btn valo-rev-dpi-btn" data-dpi="3200">3200</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2段目: 目標振り向き(180°)cm -->
+                <div class="valo-field-group">
+                  <div class="valo-label-split">
+                    <span class="valo-label">目標振り向き(180°)cm</span>
+                    <span class="valo-sub-edpi" id="valoRevTargetEdpi">eDPI: 326.6</span>
+                  </div>
+                  <div class="valo-control-row">
+                    <input type="number" id="valoRevTargetHurimukiNum" class="form-input-sm valo-input-uniform" value="20.00" min="3.0" max="100.0" step="0.1" style="width: 100px;">
+                    <input type="range" id="valoRevTargetHurimuki" min="5.0" max="50.0" step="0.1" value="20.0" class="form-range-sm valo-slider-flex">
+                  </div>
+                </div>
+
+                <!-- 3段目: 基準スコープ感度倍率(SR) -->
+                <div class="valo-field-group">
+                  <div class="valo-label-split">
+                    <span class="valo-label">基準スコープ感度倍率(SR)</span>
+                    <span class="valo-label-hint">フリック感覚一致距離%</span>
+                  </div>
+                  <div class="valo-control-row">
+                    <select id="valoRevSrScope" class="form-input-sm valo-select-scope">
+                      <option value="operator_1" selected>Operator 1 (2.5x)</option>
+                      <option value="marshal">Marshal / Outlaw (3.5x)</option>
+                      <option value="operator_2">Operator 2 (5.0x)</option>
+                    </select>
+                    <input type="number" id="valoRevSrMdNum" class="form-input-sm valo-input-uniform" value="100" min="0" max="250" step="1" style="width: 75px; min-width: 75px;">
+                    <input type="range" id="valoRevSrMd" min="0" max="178" step="1" value="100" class="form-range-sm valo-slider-flex">
+                  </div>
+                </div>
+
+                <!-- 4段目: 基準ADS感度マルチプライヤー(SMG, AR) -->
+                <div class="valo-field-group">
+                  <div class="valo-label-split">
+                    <span class="valo-label">基準ADS感度マルチプライヤー(SMG, AR)</span>
+                    <span class="valo-label-hint">フリック感覚一致距離%</span>
+                  </div>
+                  <div class="valo-control-row">
+                    <select id="valoRevAdsScope" class="form-input-sm valo-select-scope">
+                      <option value="vandal_phantom" selected>Vandal/Phantom (1.25x)</option>
+                      <option value="warden">Warden (2.0x)</option>
+                      <option value="guardian">Guardian (1.5x)</option>
+                      <option value="smg_lmg">SMG / LMG (1.15x)</option>
+                    </select>
+                    <input type="number" id="valoRevAdsMdNum" class="form-input-sm valo-input-uniform" value="100" min="0" max="250" step="1" style="width: 75px; min-width: 75px;">
+                    <input type="range" id="valoRevAdsMd" min="0" max="178" step="1" value="100" class="form-range-sm valo-slider-flex">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 中央コネクター (矢印のみ) -->
+            <div class="valo-connector">
+              <div class="valo-connector-arrow valo-arrow-rev">➔</div>
+            </div>
+
+            <!-- 右: 逆引き結果パネル (50%幅) -->
+            <div class="valo-panel-half">
+              <div class="valo-table-card valo-result-card">
+                <!-- 上段: 推奨設定値 (縦3段: 感度：照準、スコープ感度倍率、ADS感度マルチプライヤー) -->
+                <div class="valo-rev-outputs-vertical">
+                  <!-- 1. 感度：照準 -->
+                  <div class="valo-rev-out-row">
+                    <span class="valo-rev-out-label">感度：照準</span>
+                    <span id="valoRevSensCustom" class="valo-rev-out-val valo-val-cyan">0.408</span>
+                  </div>
+
+                  <!-- 2. スコープ感度倍率 -->
+                  <div class="valo-rev-out-row valo-rev-out-scope">
+                    <span class="valo-rev-out-label valo-label-pink">スコープ感度倍率</span>
+                    <span id="valoRevRecScopeMult" class="valo-rev-out-val valo-val-pink">1.000</span>
+                  </div>
+
+                  <!-- 3. ADS感度マルチプライヤー -->
+                  <div class="valo-rev-out-row valo-rev-out-ads">
+                    <span class="valo-rev-out-label valo-label-cyan">ADS感度マルチプライヤー</span>
+                    <span id="valoRevRecAdsMult" class="valo-rev-out-val valo-val-cyan">1.000</span>
+                  </div>
+                </div>
+
+                <!-- 下段: 各倍率の計算結果テーブル（全幅） -->
+                <div class="valo-table-wrap valo-rev-table-wrap">
+                  <table class="valo-calc-table valo-rev-calc-table">
+                    <thead>
+                      <tr>
+                        <th class="valo-th-weapon">武器 / スコープ</th>
+                        <th class="valo-th-zoom">倍率</th>
+                        <th class="valo-th-fov">16:9 FOV</th>
+                        <th class="valo-th-hurimuki">振り向き (180°)</th>
+                        <th class="valo-th-md" title="フリック感覚一致距離%">フリック感覚一致距離%</th>
+                      </tr>
+                    </thead>
+                    <tbody id="valoRevTableBody">
+                      <tr class="valo-row-even">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">SMG / LMG</span></td>
+                        <td class="valo-col-zoom"><strong>1.15x</strong></td>
+                        <td class="valo-col-fov">89.6°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">23.00 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-odd valo-row-ref-ads">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Vandal/Phantom</span></td>
+                        <td class="valo-col-zoom"><strong>1.25x</strong></td>
+                        <td class="valo-col-fov">82.4°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">25.00 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-even">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Guardian</span></td>
+                        <td class="valo-col-zoom"><strong>1.50x</strong></td>
+                        <td class="valo-col-fov">68.7°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">30.00 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-odd">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Warden</span></td>
+                        <td class="valo-col-zoom"><strong>2.00x</strong></td>
+                        <td class="valo-col-fov">51.5°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">40.00 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-even valo-row-ref-sr">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Operator 1</span></td>
+                        <td class="valo-col-zoom"><strong>2.50x</strong></td>
+                        <td class="valo-col-fov">41.2°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">50.00 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-odd">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Marshal / Outlaw</span></td>
+                        <td class="valo-col-zoom"><strong>3.50x</strong></td>
+                        <td class="valo-col-fov">29.4°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">70.00 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                      <tr class="valo-row-even">
+                        <td class="valo-col-weapon"><span class="valo-scope-name">Operator 2</span></td>
+                        <td class="valo-col-zoom"><strong>5.00x</strong></td>
+                        <td class="valo-col-fov">20.6°</td>
+                        <td class="valo-col-hurimuki"><span class="valo-cm-highlight">100.00 cm</span></td>
+                        <td class="valo-col-md"><span class="valo-md-badge valo-md-100">100.0%</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+
+    <!-- ====================================================================
+         大タブ 5: 体系的ドキュメント (左目次 + 右縦スクロール)
+         ==================================================================== -->
+    <section id="tab-guide" class="tab-content">
+      <div class="docs-layout">
+        
+        <!-- 左側: サイドバー目次 (Table of Contents) -->
+        <aside class="docs-sidebar">
+          <div class="docs-sidebar-header">
+            <div class="docs-sidebar-title-group">
+              <span class="docs-sidebar-icon">📚</span>
+              <span class="docs-sidebar-title">目次 INDEX</span>
+            </div>
+            <span class="docs-sidebar-badge">全5章</span>
+          </div>
+
+          <nav class="docs-toc-scroll">
+            <!-- Chapter 1 -->
+            <div class="toc-group">
+              <a href="#doc-ch1" class="toc-link toc-ch-link active">
+                <span class="toc-ch-num">01</span>
+                <span>視野角(FOV)の本質と3大タイプ</span>
+              </a>
+              <div class="toc-sub-list">
+                <a href="#doc-1-1" class="toc-link toc-sub-link">1.1 角度と平面のギャップ</a>
+                <a href="#doc-1-2" class="toc-link toc-sub-link">1.2 なぜ「FOV 90」で揃わないのか</a>
+                <a href="#doc-1-3" class="toc-link toc-sub-link">1.3 3大FOVタイプ一覧</a>
+                <a href="#doc-1-4" class="toc-link toc-sub-link">1.4 黒帯と引き伸ばしの真実</a>
+              </div>
+            </div>
+
+            <!-- Chapter 2 -->
+            <div class="toc-group">
+              <a href="#doc-ch2" class="toc-link toc-ch-link">
+                <span class="toc-ch-num">02</span>
+                <span>アスペクト比変換の数学的導出</span>
+              </a>
+              <div class="toc-sub-list">
+                <a href="#doc-2-1" class="toc-link toc-sub-link">2.1 ピンホールカメラとタンジェント</a>
+                <a href="#doc-2-2" class="toc-link toc-sub-link">2.2 水平・垂直FOVの変換公式導出</a>
+                <a href="#doc-2-3" class="toc-link toc-sub-link">2.3 任意比率変換の一般化</a>
+                <a href="#doc-2-4" class="toc-link toc-sub-link">2.4 計算例：CS2の90°は16:9で何度？</a>
+              </div>
+            </div>
+
+            <!-- Chapter 3 -->
+            <div class="toc-group">
+              <a href="#doc-ch3" class="toc-link toc-ch-link">
+                <span class="toc-ch-num">03</span>
+                <span>ADSズームの2つの流儀</span>
+              </a>
+              <div class="toc-sub-list">
+                <a href="#doc-3-1" class="toc-link toc-sub-link">3.1 光学倍率（焦点距離スケーリング）</a>
+                <a href="#doc-3-2" class="toc-link toc-sub-link">3.2 視野角単純除算倍率（VALORANT方式）</a>
+                <a href="#doc-3-3" class="toc-link toc-sub-link">3.3 なぜ見え方に差が生まれるのか</a>
+              </div>
+            </div>
+
+            <!-- Chapter 4 -->
+            <div class="toc-group">
+              <a href="#doc-ch4" class="toc-link toc-ch-link">
+                <span class="toc-ch-num">04</span>
+                <span>モニターディスタンス(MD%)完全解説</span>
+              </a>
+              <div class="toc-sub-list">
+                <a href="#doc-4-1" class="toc-link toc-sub-link">4.1 なぜ「振り向きcm一致」は破綻するのか</a>
+                <a href="#doc-4-2" class="toc-link toc-sub-link">4.2 MD%の幾何学的定義</a>
+                <a href="#doc-4-3" class="toc-link toc-sub-link">4.3 感度倍率公式の完全数学導出</a>
+                <a href="#doc-4-4" class="toc-link toc-sub-link">4.4 MD 0% の極限（ロピタルの定理）</a>
+                <a href="#doc-4-5" class="toc-link toc-sub-link">4.5 MDHとMDVの違いと「133%」の正体</a>
+                <a href="#doc-4-6" class="toc-link toc-sub-link">4.6 画面端フリックとトレードオフの真相</a>
+              </div>
+            </div>
+
+            <!-- Chapter 5 -->
+            <div class="toc-group">
+              <a href="#doc-ch5" class="toc-link toc-ch-link">
+                <span class="toc-ch-num">05</span>
+                <span>主要FPSタイトルのADS感度仕様</span>
+              </a>
+              <div class="toc-sub-list">
+                <a href="#doc-5-1" class="toc-link toc-sub-link">5.1 VALORANT（MD 100%基準）</a>
+                <a href="#doc-5-2" class="toc-link toc-sub-link">5.2 Apex Legends（MD 0%基準）</a>
+                <a href="#doc-5-3" class="toc-link toc-sub-link">5.3 CS2（MD 75%基準）</a>
+                <a href="#doc-5-4" class="toc-link toc-sub-link">5.4 タイトル間移行の実践ガイド</a>
+              </div>
+            </div>
+          </nav>
+        </aside>
+
+        <!-- 右側: 本文リーダーペイン (縦スクロール) -->
+        <main class="docs-body-pane" id="docsBodyPane">
+          <div class="docs-container">
+
+            <!-- ドキュメント ヘッダーカバー -->
+            <header class="docs-hero">
+              <h1 class="docs-hero-title">FPS視野角（FOV）・モニターディスタンス（MD%）・感度スケーリング 完全体系化ドキュメント</h1>
+              <p class="docs-hero-lead">
+                「ゲームごとにFOV 90の意味が違うのはなぜ？」「ADSしたときの感度はどう合わせるのが正解？」「モニターディスタンス（MD%）って結局なに？」<br>
+                ネット上で曖昧に語られがちなFPSの幾何学・光学・感度理論を、直感的な例えと厳密な数学的導出を用いて徹底的に解き明かします。<br>
+                このドキュメントはgeminiの独断と偏見で作成しました。
+              </p>
+            </header>
+
+            <!-- ============================================================
+                 第1章: 視野角(FOV)の本質と3大タイプ
+                 ============================================================ -->
+            <article class="docs-chapter" id="doc-ch1">
+              <div class="docs-ch-header">
+                <span class="docs-ch-badge">CHAPTER 01</span>
+                <h2 class="docs-ch-title">視野角（FOV）の本質と3大タイプ</h2>
+              </div>
+
+              <!-- 1.1 -->
+              <section class="docs-section" id="doc-1-1">
+                <h3 class="docs-sec-title">1.1 角度と平面のギャップ：なぜ歪みが生じるのか？</h3>
+                <p class="docs-p">
+                  FPSにおいて、プレイヤーはマウスを動かすことで<strong>「3次元空間の中でカメラを球面上に角度回転」</strong>させています。
+                  しかし、私たちが実際に見ているのは<strong>「平らな長方形の2Dモニター」</strong>です。
+                </p>
+
+                <!-- 例えボックス -->
+                <div class="docs-analogy-box">
+                  <div class="docs-analogy-header">
+                    <span>💡</span>
+                    <span>直感的な例え：地球儀と世界地図（メルカトル図法）</span>
+                  </div>
+                  <div class="docs-analogy-content">
+                    球体である地球を四角い平面の紙に無理やり広げると、赤道付近は歪みが少ないのに、端にあるグリーンランドや南極が実際の何倍も巨大化して描かれます。<br>
+                    FPSの画面もこれと全く同じです。<strong>3Dの球面世界を平らな2Dスクリーンに透視投影（Perspective Projection）</strong>しているため、<strong>画面の中心と画面の端では「同じ1度」あたりのピクセル幅が全く異なります（端ほど激しく引き伸ばされる）</strong>。
+                  </div>
+                </div>
+
+                <!-- SVG Diagram 1: 球面回転 vs 平面射影 -->
+                <div class="docs-diagram-card">
+                  <svg class="docs-diagram-svg" viewBox="0 0 700 280">
+                    <defs>
+                      <linearGradient id="gradRay" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.1"/>
+                        <stop offset="100%" stop-color="#00f2fe" stop-opacity="0.6"/>
+                      </linearGradient>
+                    </defs>
+                    <!-- 背景グリッド -->
+                    <rect width="700" height="280" fill="transparent"/>
+                    <!-- 視点 O -->
+                    <circle cx="120" cy="140" r="8" fill="#ff007f"/>
+                    <text x="90" y="145" fill="#ff007f" font-weight="bold" font-size="14">視点 (Eye)</text>
+                    
+                    <!-- 単位円弧 (球面) -->
+                    <path d="M 120 40 A 100 100 0 0 1 120 240" fill="none" stroke="#8b949e" stroke-width="2" stroke-dasharray="4,4"/>
+                    <text x="210" y="55" fill="#8b949e" font-size="12">3Dの回転 (等角度 Δθ)</text>
+
+                    <!-- スクリーン平面 (直線) -->
+                    <line x1="360" y1="20" x2="360" y2="260" stroke="#00f2fe" stroke-width="4"/>
+                    <text x="375" y="35" fill="#00f2fe" font-weight="bold" font-size="14">2Dモニター画面 (平面射影)</text>
+
+                    <!-- 光線 (Ray) 中央付近 (角度10度) -->
+                    <line x1="120" y1="140" x2="360" y2="140" stroke="#00f2fe" stroke-width="1.5" stroke-dasharray="2,2"/>
+                    <line x1="120" y1="140" x2="360" y2="165" stroke="#00f2fe" stroke-width="1.5"/>
+                    <line x1="120" y1="140" x2="360" y2="115" stroke="#00f2fe" stroke-width="1.5"/>
+                    <rect x="360" y="115" width="6" height="50" fill="#00f2fe"/>
+                    <text x="375" y="145" fill="#00f2fe" font-size="12">中央の10°幅 = 狭い (密度が濃い)</text>
+
+                    <!-- 光線 (Ray) 画面端付近 (同じ角度10度) -->
+                    <line x1="120" y1="140" x2="360" y2="215" stroke="#ffd000" stroke-width="1.5"/>
+                    <line x1="120" y1="140" x2="360" y2="255" stroke="#ffd000" stroke-width="1.5"/>
+                    <rect x="360" y="215" width="6" height="40" fill="#ffd000"/>
+                    <text x="375" y="240" fill="#ffd000" font-weight="bold" font-size="12">画面端の同じ10°幅 = 激しく間延び拡大！</text>
+
+                    <!-- 中心線 -->
+                    <circle cx="360" cy="140" r="4" fill="#ff007f"/>
+                    <text x="320" y="132" fill="#fff" font-size="11">クロスヘア</text>
+                  </svg>
+                  <span class="docs-diagram-caption">【図1】3Dの角度回転（円弧）と2Dモニター（直線）の透視投影。同じ回転角でも画面端ほどピクセル幅が拡大する（タンジェントの非線形性）。</span>
+                </div>
+              </section>
+
+              <!-- 1.2 -->
+              <section class="docs-section" id="doc-1-2">
+                <h3 class="docs-sec-title">1.2 なぜ「FOV 90」で揃えてもゲーム間で別物になるのか？</h3>
+                <p class="docs-p">
+                  FPS初心者が最初に必ず直面する落とし穴がこれです。<br>
+                  <em>「CS2でFOV 90だったから、ApexやVALORANTやR6Sでも全部90に設定した！これで視界は全部揃った！」</em>……<strong>これは完全に間違いです</strong>。
+                </p>
+                <p class="docs-p">
+                  なぜなら、ゲームによって設定画面に表示されている「FOV」という数値が、<strong>「どのアスペクト比の、どの方向の角度を指しているか（FOVタイプ）」</strong>が全く異なるからです。
+                </p>
+
+                <!-- テーブル: 同じ90°の実際の比較 -->
+                <div class="docs-table-wrap">
+                  <table class="docs-table">
+                    <thead>
+                      <tr>
+                        <th>ゲーム設定値</th>
+                        <th>内部で採用しているFOVタイプ</th>
+                        <th>16:9モニターでの実効水平画角 (hFOV)</th>
+                        <th>視界の広さの実際</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="docs-td-strong">CS2 (CS:GO) の 90</td>
+                        <td>4:3 水平FOV (hFOV 4:3)</td>
+                        <td class="docs-td-highlight">106.26°</td>
+                        <td>標準的な広さ</td>
+                      </tr>
+                      <tr>
+                        <td class="docs-td-strong">R6S (シージ) の 90</td>
+                        <td>垂直FOV (vFOV)</td>
+                        <td class="docs-td-highlight">121.28°</td>
+                        <td>超広角（魚眼レンズ級）</td>
+                      </tr>
+                      <tr>
+                        <td class="docs-td-strong">Overwatch 2 の 90</td>
+                        <td>16:9 水平FOV (hFOV 16:9)</td>
+                        <td class="docs-td-highlight">90.00°</td>
+                        <td>かなり狭い（ズーム気味）</td>
+                      </tr>
+                      <tr>
+                        <td class="docs-td-strong">Apex Legends の 90</td>
+                        <td>4:3ベースの独自カスタムスケーリング</td>
+                        <td class="docs-td-highlight">104.28°</td>
+                        <td>CS2より少し狭い</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="docs-callout docs-callout-warning">
+                  <span class="docs-callout-icon">⚠️</span>
+                  <div>
+                    <strong>重要：</strong>視野角の数値を語るときは、単に「90」と言うだけでは何の意味も持ちません。必ず<strong>「16:9の水平何度」「4:3の水平何度」「垂直何度」</strong>というFOVタイプをセットで指定する必要があります。
+                  </div>
+                </div>
+              </section>
+
+              <!-- 1.3 -->
+              <section class="docs-section" id="doc-1-3">
+                <h3 class="docs-sec-title">1.3 現代FPSを支配する3大FOVタイプ</h3>
+                <p class="docs-p">
+                  世の中に存在するほぼすべてのFPSタイトルは、次の<strong>3大FOVタイプ</strong>のいずれかを基準にカメラを設計しています。
+                </p>
+                <div class="docs-p">
+                  <ol style="padding-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+                    <li><strong>16:9 水平FOV（hFOV 16:9）</strong>：現在のスタンダードである16:9モニターの横幅いっぱいを基準角とする方式。<br><small style="color: var(--text-dim);">採用例：VALORANT（103°固定）、Overwatch 2（103°デフォルト）、Fortnite</small></li>
+                    <li><strong>4:3 水平FOV（hFOV 4:3）</strong>：昔のCRTモニター（4:3）の横幅を基準とする歴史的標準方式。ValveのSourceエンジン系に由来。<br><small style="color: var(--text-dim);">採用例：CS2, CS:GO, Apex Legends, Team Fortress 2</small></li>
+                    <li><strong>垂直FOV（vFOV / 1:1 hFOV）</strong>：モニターの縦の高さを基準とする方式。モニターのアスペクト比に左右されず縦の視界が不変となるため開発者に好まれる。<br><small style="color: var(--text-dim);">採用例：Rainbow Six Siege, Battlefieldシリーズ（Hor+表記とvFOVが連動）</small></li>
+                  </ol>
+                </div>
+              </section>
+
+              <!-- 1.4 -->
+              <section class="docs-section" id="doc-1-4">
+                <h3 class="docs-sec-title">1.4 黒帯（Black Bar）と引き伸ばし（Stretched）の幾何学的真実</h3>
+                <p class="docs-p">
+                  CS2やVALORANTで「4:3解像度」を使用するプレイヤーが多いですが、ゲームによって挙動が真逆になります。
+                </p>
+                <p class="docs-p">
+                  ・<strong>CS2の場合（vFOV固定型）</strong>：16:9から4:3黒帯にすると、左右の視界が削られます。これをモニター全幅に引き伸ばすと、<strong>「横方向だけが1.33倍に物理的に拡大」</strong>され、敵の横幅が太く見え、水平移動スピードも1.33倍速く感じられます。<br>
+                  ・<strong>VALORANTの場合（16:9 hFOV固定型）</strong>：VALORANTは公平性を保つため、4:3解像度にしても左右の視界（103°）が削られません。代わりに縦に黒帯が入るか、引き伸ばすと上下が押し縮められます。CS2のような「敵を太くする引き伸ばし」はシステム上防止されています。
+                </p>
+
+                <!-- 例えボックス: ゴムシート引き伸ばし -->
+                <div class="docs-analogy-box">
+                  <div class="docs-analogy-header">
+                    <span>💡</span>
+                    <span>直感的な例え：ゴムシートに描いたイラストの横引っ張り</span>
+                  </div>
+                  <div class="docs-analogy-content">
+                    ゴムシートに描いたキャラクターを、上下はそのままにして左右の両端だけを手でグイッと引っ張ってみてください。<br>
+                    背の高さ（身長）は変わらないのに、<strong>横幅（胴体や顔）だけが1.33倍デブに広がって見えます</strong>よね。<br>
+                    4:3引き伸ばし（Stretched）とは、まさにこれです。<strong>「敵の頭や体の当たり判定（ヒットボックス）が画面上で物理的に太くなるため、視覚的にエイムしやすく感じる」</strong>のがプロが好む最大の理由です。
+                  </div>
+                </div>
+
+                <!-- SVG Diagram 1b: 16:9 vs 4:3黒帯 vs 4:3引き伸ばし -->
+                <div class="docs-diagram-card">
+                  <svg class="docs-diagram-svg" viewBox="0 0 720 200">
+                    <!-- Monitor 1: 16:9 Native -->
+                    <g transform="translate(15, 15)">
+                      <rect width="210" height="125" rx="6" fill="rgba(0,0,0,0.06)" stroke="#8b949e" stroke-width="2"/>
+                      <line x1="105" y1="20" x2="105" y2="105" stroke="#8b949e" stroke-width="1" stroke-dasharray="2,2"/>
+                      <circle cx="105" cy="45" r="9" fill="#00f2fe"/>
+                      <rect x="96" y="58" width="18" height="40" rx="3" fill="#00f2fe" opacity="0.8"/>
+                      <text x="105" y="148" text-anchor="middle" fill="currentColor" font-weight="bold" font-size="12">① 16:9 ネイティブ</text>
+                      <text x="105" y="166" text-anchor="middle" fill="#8b949e" font-size="10.5">広大な視界 / 標準横幅 (1.0x)</text>
+                    </g>
+
+                    <!-- Monitor 2: 4:3 Black Bars -->
+                    <g transform="translate(255, 15)">
+                      <rect width="210" height="125" rx="6" fill="rgba(0,0,0,0.06)" stroke="#8b949e" stroke-width="2"/>
+                      <rect x="0" y="0" width="26" height="125" rx="4" fill="#080a0f" opacity="0.75"/>
+                      <rect x="184" y="0" width="26" height="125" rx="4" fill="#080a0f" opacity="0.75"/>
+                      <text x="13" y="66" fill="#8b949e" font-size="9" text-anchor="middle">黒帯</text>
+                      <text x="197" y="66" fill="#8b949e" font-size="9" text-anchor="middle">黒帯</text>
+                      <line x1="105" y1="20" x2="105" y2="105" stroke="#8b949e" stroke-width="1" stroke-dasharray="2,2"/>
+                      <circle cx="105" cy="45" r="9" fill="#8b949e"/>
+                      <rect x="96" y="58" width="18" height="40" rx="3" fill="#8b949e" opacity="0.8"/>
+                      <text x="105" y="148" text-anchor="middle" fill="currentColor" font-weight="bold" font-size="12">② 4:3 黒帯 (Black Bars)</text>
+                      <text x="105" y="166" text-anchor="middle" fill="#8b949e" font-size="10.5">左右の視界をカット / 歪みなし</text>
+                    </g>
+
+                    <!-- Monitor 3: 4:3 Stretched -->
+                    <g transform="translate(495, 15)">
+                      <rect width="210" height="125" rx="6" fill="rgba(0,0,0,0.06)" stroke="#ffd000" stroke-width="2"/>
+                      <line x1="105" y1="20" x2="105" y2="105" stroke="#8b949e" stroke-width="1" stroke-dasharray="2,2"/>
+                      <ellipse cx="105" cy="45" rx="12" ry="9" fill="#ffd000"/>
+                      <rect x="93" y="58" width="24" height="40" rx="3" fill="#ffd000" opacity="0.85"/>
+                      <path d="M 82 78 L 73 78 M 76 75 L 73 78 L 76 81" stroke="#ff007f" stroke-width="2"/>
+                      <path d="M 128 78 L 137 78 M 134 75 L 137 78 L 134 81" stroke="#ff007f" stroke-width="2"/>
+                      <text x="105" y="116" text-anchor="middle" fill="#ff007f" font-weight="bold" font-size="10">+33% 太く拡大！</text>
+                      <text x="105" y="148" text-anchor="middle" fill="#ffd000" font-weight="bold" font-size="12">③ 4:3 引き伸ばし (Stretched)</text>
+                      <text x="105" y="166" text-anchor="middle" fill="#ffd000" font-size="10.5">敵モデルが1.33倍太く！(知覚速度も上昇)</text>
+                    </g>
+                  </svg>
+                  <span class="docs-diagram-caption">【図1b】アスペクト比表示モードの比較。引き伸ばしでは全画面に引き延ばされるため、敵モデルの水平ピクセル幅が1.33倍に物理的に拡大する。</span>
+                </div>
+              </section>
+            </article>
+
+            <!-- ============================================================
+                 第2章: アスペクト比変換の数学的導出
+                 ============================================================ -->
+            <article class="docs-chapter" id="doc-ch2">
+              <div class="docs-ch-header">
+                <span class="docs-ch-badge">CHAPTER 02</span>
+                <h2 class="docs-ch-title">アスペクト比変換の数学的導出</h2>
+              </div>
+
+              <!-- 2.1 -->
+              <section class="docs-section" id="doc-2-1">
+                <h3 class="docs-sec-title">2.1 ピンホールカメラとタンジェント（tan）</h3>
+                <p class="docs-p">
+                  視野角の変換は、難しい高等数学ではなく<strong>「直角三角形のタンジェント（$\tan$）」</strong>だけで100%完全に説明できます。
+                </p>
+                <p class="docs-p">
+                  視点から画面までの「焦点距離（カメラからモニターまでの仮想的な距離）」を $f$、画面の半分の幅を $W/2$、視野角（全角）を $\theta$ と置きます。
+                  視点から画面中心へ垂線を下ろすと、直角三角形ができます。このときの角度は半角 $\frac{\theta}{2}$ です。
+                </p>
+
+                <!-- SVG Diagram 2: カメラ幾何と直角三角形 -->
+                <div class="docs-diagram-card">
+                  <svg class="docs-diagram-svg" viewBox="0 0 650 240">
+                    <!-- 背景 -->
+                    <rect width="650" height="240" fill="transparent"/>
+                    <!-- 視点 O -->
+                    <circle cx="80" cy="120" r="6" fill="#ff007f"/>
+                    <text x="40" y="125" fill="#ff007f" font-weight="bold" font-size="13">視点 O</text>
+
+                    <!-- 焦点距離 f (垂線) -->
+                    <line x1="80" y1="120" x2="420" y2="120" stroke="#8b949e" stroke-width="2" stroke-dasharray="4,4"/>
+                    <text x="230" y="112" fill="#8b949e" font-size="13">焦点距離 f (一定)</text>
+
+                    <!-- スクリーン半幅 W/2 -->
+                    <line x1="420" y1="30" x2="420" y2="210" stroke="#00f2fe" stroke-width="4"/>
+                    <line x1="420" y1="120" x2="420" y2="30" stroke="#ffd000" stroke-width="4"/>
+                    <text x="435" y="75" fill="#ffd000" font-weight="bold" font-size="13">画面半幅 (W/2)</text>
+
+                    <!-- 視線 (斜辺) -->
+                    <line x1="80" y1="120" x2="420" y2="30" stroke="#00f2fe" stroke-width="2"/>
+                    <line x1="80" y1="120" x2="420" y2="210" stroke="#00f2fe" stroke-width="2"/>
+
+                    <!-- 半角 θ/2 円弧 -->
+                    <path d="M 140 120 A 60 60 0 0 0 134 105" fill="none" stroke="#ffd000" stroke-width="2"/>
+                    <text x="145" y="108" fill="#ffd000" font-weight="bold" font-size="12">θ/2</text>
+                    <text x="155" y="138" fill="#00f2fe" font-size="11">全角 θ (FOV)</text>
+
+                    <!-- 直角マーク -->
+                    <rect x="405" y="105" width="15" height="15" fill="none" stroke="#8b949e" stroke-width="1.5"/>
+                  </svg>
+                  <span class="docs-diagram-caption">【図2】カメラ幾何学の基本直角三角形。対辺（画面半幅）÷ 隣辺（焦点距離 $f$）＝ $\tan(\theta/2)$。</span>
+                </div>
+              </section>
+
+              <!-- 2.2 -->
+              <section class="docs-section" id="doc-2-2">
+                <h3 class="docs-sec-title">2.2 【数式導出】水平FOVと垂直FOVの変換公式</h3>
+                <p class="docs-p">
+                  図2の直角三角形から、三角比の定義より直ちに次の関係が成り立ちます：
+                </p>
+
+                <!-- 数式カード 1 -->
+                <div class="docs-formula-card">
+                  <div class="docs-formula-header">
+                    <span class="docs-formula-title">📐 基本幾何関係式</span>
+                    <span class="docs-hero-meta">定義式</span>
+                  </div>
+                  <div class="docs-formula-display">
+                    $$\tan\left(\frac{\text{hFOV}}{2}\right) = \frac{W / 2}{f} \qquad \tan\left(\frac{\text{vFOV}}{2}\right) = \frac{H / 2}{f}$$
+                  </div>
+                  <div class="docs-formula-vars">
+                    <span><code>W</code>: 画面の横幅 (Width)</span>
+                    <span><code>H</code>: 画面の縦幅 (Height)</span>
+                    <span><code>f</code>: カメラの焦点距離 (Focal Length)</span>
+                  </div>
+                </div>
+
+                <p class="docs-p">
+                  ここで、画面のアスペクト比（長辺÷短辺）を $AR = \frac{W}{H}$ と定義すると、$W/2 = AR \times (H/2)$ と表せます。
+                  両式の比を取ると焦点距離 $f$ が美しく相殺され、次の<strong>基本変換定理</strong>が導かれます：
+                </p>
+
+                <!-- 数式カード 2 (コア公式) -->
+                <div class="docs-formula-card" style="border-color: var(--cyan);">
+                  <div class="docs-formula-header">
+                    <span class="docs-formula-title" style="color: var(--cyan);">★ 水平FOV ↔ 垂直FOV 相互変換公式</span>
+                    <span class="docs-sidebar-badge">最重要公式</span>
+                  </div>
+                  <div class="docs-formula-display">
+                    $$\tan\left(\frac{\text{hFOV}}{2}\right) = AR \times \tan\left(\frac{\text{vFOV}}{2}\right)$$
+                  </div>
+                  <div class="docs-formula-display" style="margin-top: 6px; font-size: 1.05rem;">
+                    $$\text{hFOV} = 2 \cdot \arctan\left( AR \cdot \tan\left(\frac{\text{vFOV}}{2}\right) \right)$$
+                    $$\text{vFOV} = 2 \cdot \arctan\left( \frac{1}{AR} \cdot \tan\left(\frac{\text{hFOV}}{2}\right) \right)$$
+                  </div>
+                </div>
+              </section>
+
+              <!-- 2.3 -->
+              <section class="docs-section" id="doc-2-3">
+                <h3 class="docs-sec-title">2.3 異なるアスペクト比間の変換公式（一般化）</h3>
+                <p class="docs-p">
+                  アスペクト比 $AR_1$（変換元）からアスペクト比 $AR_2$（変換先）へ視野角を変換したい場合、<strong>垂直画角 $\text{vFOV}$ は同一画面上で共通</strong>であるため、$\tan(\text{vFOV}/2)$ を媒介にして両者を等号で結びます：
+                </p>
+                <div class="docs-formula-display" style="font-size: 1.15rem;">
+                  $$\frac{\tan(\text{hFOV}_1 / 2)}{AR_1} = \frac{\tan(\text{hFOV}_2 / 2)}{AR_2} = \tan\left(\frac{\text{vFOV}}{2}\right)$$
+                </div>
+                <p class="docs-p">
+                  これより、任意の画面比率への一般化変換公式が得られます：
+                </p>
+
+                <div class="docs-formula-card">
+                  <div class="docs-formula-header">
+                    <span class="docs-formula-title">🌍 任意アスペクト比 相互変換公式</span>
+                  </div>
+                  <div class="docs-formula-display">
+                    $$\text{FOV}_{\text{target}} = 2 \cdot \arctan\left( \frac{AR_{\text{target}}}{AR_{\text{source}}} \cdot \tan\left(\frac{\text{FOV}_{\text{source}}}{2}\right) \right)$$
+                  </div>
+                </div>
+              </section>
+
+              <!-- 2.4 -->
+              <section class="docs-section" id="doc-2-4">
+                <h3 class="docs-sec-title">2.4 実践計算：CS2の「4:3 FOV 90°」は16:9モニターで何度？</h3>
+                <p class="docs-p">
+                  実際に上の公式を使って、有名な「CS2の4:3画角90°」を16:9モニターの水平画角に変換してみましょう。
+                </p>
+                <div class="docs-formula-card">
+                  <div class="docs-formula-display" style="text-align: left; font-size: 0.98rem; line-height: 1.8;">
+                    1. 変換元比率: $AR_{\text{source}} = 4/3 \approx 1.3333$<br>
+                    2. 変換先比率: $AR_{\text{target}} = 16/9 \approx 1.7778$<br>
+                    3. 比率の比: $\frac{AR_{\text{target}}}{AR_{\text{source}}} = \frac{16/9}{4/3} = \frac{16}{9} \times \frac{3}{4} = \frac{4}{3} \approx 1.3333$<br>
+                    4. 半角のタンジェント: $\tan(90^\circ / 2) = \tan(45^\circ) = 1.0000$<br>
+                    5. 変換先半角: $\arctan\left( \frac{4}{3} \times 1.0000 \right) = \arctan(1.3333) \approx 53.13^\circ$<br>
+                    6. 2倍して全角化: $53.1301^\circ \times 2 = \mathbf{106.26^\circ}$
+                  </div>
+                </div>
+                <p class="docs-p">
+                  このように、CS2の4:3画角90°は、16:9モニターで見ると<strong>106.26°</strong>として描画されていることが数学的に正確に証明できました。
+                </p>
+              </section>
+            </article>
+
+            <!-- ============================================================
+                 第3章: ADSズームの2つの流儀
+                 ============================================================ -->
+            <article class="docs-chapter" id="doc-ch3">
+              <div class="docs-ch-header">
+                <span class="docs-ch-badge">CHAPTER 03</span>
+                <h2 class="docs-ch-title">ADSズームの2つの流儀（光学倍率 vs 視野角倍率）</h2>
+              </div>
+
+              <!-- 3.1 -->
+              <section class="docs-section" id="doc-3-1">
+                <h3 class="docs-sec-title">3.1 光学倍率（焦点距離スケーリング）とは？</h3>
+                <p class="docs-p">
+                  スコープを覗く（ADS）とき、カメラの視野角は狭くなります。しかし、<strong>「何倍に拡大するか」の定義がゲームによって2通り存在します</strong>。
+                </p>
+                <p class="docs-p">
+                  第1の流儀が<strong>「光学倍率（Focal Length Scaling）」</strong>です。<br>
+                  これは現実の望遠鏡やカメラレンズと同じ物理法則に従い、<strong>焦点距離 $f$ を $M$ 倍に伸ばす</strong>方式です（Battlefieldシリーズ、CoD等で採用）。
+                </p>
+                <div class="docs-formula-card">
+                  <div class="docs-formula-display">
+                    $$\tan\left(\frac{\theta_{\text{ADS}}}{2}\right) = \frac{1}{M} \cdot \tan\left(\frac{\theta_{\text{Hip}}}{2}\right)$$
+                    $$\theta_{\text{ADS}} = 2 \cdot \arctan\left( \frac{1}{M} \cdot \tan\left(\frac{\theta_{\text{Hip}}}{2}\right) \right)$$
+                  </div>
+                </div>
+                <p class="docs-p">
+                  この方式の最大の利点は、<strong>画面中央に映る標的のピクセルサイズ（高さ・横幅）がキッカリ正確に $M$ 倍に拡大される</strong>ことです（2倍スコープなら敵の大きさが画面上で正確に2倍になる）。
+                </p>
+              </section>
+
+              <!-- 3.2 -->
+              <section class="docs-section" id="doc-3-2">
+                <h3 class="docs-sec-title">3.2 視野角単純除算倍率（VALORANT方式）とは？</h3>
+                <p class="docs-p">
+                  第2の流儀が、Riot GamesのVALORANTなどが採用している<strong>「視野角単純除算倍率」</strong>です。<br>
+                  焦点距離ではなく、<strong>画角（角度そのもの）を $M$ で割る</strong>方式です：
+                </p>
+                <div class="docs-formula-display">
+                  $$\theta_{\text{ADS}} = \frac{\theta_{\text{Hip}}}{M}$$
+                </div>
+                <p class="docs-p">
+                  例として、VALORANTの腰だめ画角は $103.0^\circ$ 固定です。オペレーターの第1段階ズームは $2.5\text{倍}$ ですが、ゲーム内では：
+                  $$\theta_{\text{ADS}} = \frac{103.0^\circ}{2.5} = 41.20^\circ$$
+                  と計算されます。タンジェント関数を挟まないため実装が極めてシンプルです。
+                </p>
+              </section>
+
+              <!-- 3.3 -->
+              <section class="docs-section" id="doc-3-3">
+                <h3 class="docs-sec-title">3.3 なぜ見え方に差が生まれるのか？</h3>
+                <p class="docs-p">
+                  角度を単純に半分にする（$\theta / 2$）のと、焦点距離を2倍にしてタンジェントで圧縮するのでは、<strong>タンジェントの非線形性のせいで画角に明確なズレ</strong>が生じます。<br>
+                  当アプリの「FOVシミュレーター（ADS）」タブで「光学倍率」と「視野角倍率(VALORANT)」を切り替えると、同じ2.0倍でも実効FOVが微妙に異なる（光学倍率では $53.13^\circ$、単純除算では $51.50^\circ$）ことがリアルタイムに目撃できます。
+                </p>
+
+                <!-- 例えボックス: 光学レンズ vs デジタル切り抜き -->
+                <div class="docs-analogy-box">
+                  <div class="docs-analogy-header">
+                    <span>💡</span>
+                    <span>直感的な例え：一眼レフの望遠レンズ vs スマホのデジタル拡大</span>
+                  </div>
+                  <div class="docs-analogy-content">
+                    ・<strong>光学倍率（CoD/BF）</strong>：一眼レフの望遠レンズを繰り出して物理的に焦点を伸ばす方式。被写体の比率が崩れず、中央の敵の大きさが正確に $M$ 倍になります。<br>
+                    ・<strong>視野角除算（VALORANT）</strong>：撮影した写真の画角数値を無理やり割り算する方式。中央の敵の拡大率は $M$ 倍よりもわずかに大きくなり（2倍設定で実質約2.6倍拡大感）、中心付近がよりクローズアップされて見えます。
+                  </div>
+                </div>
+
+                <!-- SVG Diagram 2b: 光学倍率 vs 視野角除算の比較 -->
+                <div class="docs-diagram-card">
+                  <svg class="docs-diagram-svg" viewBox="0 0 780 220">
+                    <!-- 上段: 光学倍率 -->
+                    <g transform="translate(10, 10)">
+                      <rect width="760" height="95" rx="6" fill="rgba(0,0,0,0.06)" stroke="rgba(0, 242, 254, 0.3)" stroke-width="1.5"/>
+                      <circle cx="50" cy="48" r="6" fill="#ff007f"/>
+                      <text x="40" y="70" fill="#ff007f" font-size="11">視点</text>
+                      
+                      <!-- 焦点距離 f -> 2f -->
+                      <line x1="50" y1="48" x2="230" y2="48" stroke="#8b949e" stroke-width="1" stroke-dasharray="2,2"/>
+                      <line x1="230" y1="20" x2="230" y2="76" stroke="#8b949e" stroke-width="1.5"/>
+                      <text x="180" y="42" fill="#8b949e" font-size="10">元 f</text>
+                      
+                      <line x1="50" y1="48" x2="450" y2="48" stroke="#00f2fe" stroke-width="1.5" stroke-dasharray="3,3"/>
+                      <line x1="450" y1="15" x2="450" y2="81" stroke="#00f2fe" stroke-width="3"/>
+                      <text x="290" y="40" fill="#00f2fe" font-size="10.5">焦点距離 2f に伸長 (2倍)</text>
+
+                      <!-- 光線 -->
+                      <line x1="50" y1="48" x2="450" y2="20" stroke="#00f2fe" stroke-width="1.5"/>
+                      <line x1="50" y1="48" x2="450" y2="76" stroke="#00f2fe" stroke-width="1.5"/>
+                      <rect x="450" y="33" width="8" height="30" fill="#00f2fe"/>
+
+                      <text x="475" y="40" fill="#00f2fe" font-weight="bold" font-size="12">① 光学倍率（焦点距離 2倍）</text>
+                      <text x="475" y="60" fill="currentColor" font-size="11">中央標的：正確に 2.00× に拡大</text>
+                    </g>
+
+                    <!-- 下段: 視野角除算 (VALORANT) -->
+                    <g transform="translate(10, 115)">
+                      <rect width="760" height="95" rx="6" fill="rgba(0,0,0,0.06)" stroke="rgba(255, 0, 127, 0.3)" stroke-width="1.5"/>
+                      <circle cx="50" cy="48" r="6" fill="#ff007f"/>
+                      
+                      <!-- 角度 2等分 -->
+                      <line x1="50" y1="48" x2="450" y2="48" stroke="#8b949e" stroke-width="1" stroke-dasharray="2,2"/>
+                      <line x1="50" y1="48" x2="450" y2="12" stroke="#8b949e" stroke-width="1" stroke-dasharray="2,2"/>
+                      <line x1="50" y1="48" x2="450" y2="84" stroke="#8b949e" stroke-width="1" stroke-dasharray="2,2"/>
+                      <text x="110" y="30" fill="#8b949e" font-size="10">元画角 103°</text>
+
+                      <line x1="50" y1="48" x2="450" y2="28" stroke="#ff007f" stroke-width="1.5"/>
+                      <line x1="50" y1="48" x2="450" y2="68" stroke="#ff007f" stroke-width="1.5"/>
+                      <text x="240" y="64" fill="#ff007f" font-size="10.5">半分 51.5° (103° ÷ 2)</text>
+
+                      <!-- スクリーン -->
+                      <line x1="450" y1="15" x2="450" y2="81" stroke="#ff007f" stroke-width="3"/>
+                      <rect x="450" y="30" width="8" height="36" fill="#ff007f"/>
+
+                      <text x="475" y="40" fill="#ff007f" font-weight="bold" font-size="12">② 視野角除算倍率（VALORANT方式）</text>
+                      <text x="475" y="60" fill="currentColor" font-size="11">中央標的：約 2.60× （強めにズーム）</text>
+                    </g>
+                  </svg>
+                  <span class="docs-diagram-caption">【図2b】光学倍率と視野角除算倍率の光路比較。光学倍率が中心標的を厳密に2倍にするのに対し、VALORANT方式はタンジェント非線形性により中央がより強く拡大される。</span>
+                </div>
+              </section>
+            </article>
+
+            <!-- ============================================================
+                 第4章: モニターディスタンス(MD%)完全解説
+                 ============================================================ -->
+            <article class="docs-chapter" id="doc-ch4">
+              <div class="docs-ch-header">
+                <span class="docs-ch-badge">CHAPTER 04</span>
+                <h2 class="docs-ch-title">モニターディスタンス（MD%）理論と感度スケーリング</h2>
+              </div>
+
+              <!-- 4.1 -->
+              <section class="docs-section" id="doc-4-1">
+                <h3 class="docs-sec-title">4.1 なぜ「振り向きcm一致（360°一致）」ではADSエイムが崩壊するのか？</h3>
+                <p class="docs-p">
+                  初心者が一度は抱く疑問：<em>「スナイパースコープを覗いたときも、腰だめと全く同じ振り向きcm（360°回転距離）にすれば、筋肉の記憶がそのまま使えて最強なのでは？」</em>
+                </p>
+                
+                <div class="docs-analogy-box">
+                  <div class="docs-analogy-header">
+                    <span>💡</span>
+                    <span>直感的な例え：高倍率の双眼鏡を覗きながら全力で首を振る</span>
+                  </div>
+                  <div class="docs-analogy-content">
+                    肉眼のときと同じスピードで双眼鏡を持ったまま首を回したら、視界の景色は超音速でビュンビュン流れて、敵を捉えるどころか猛烈に酔ってしまいますよね。<br>
+                    倍率を上げて視界を狭くしたのに、カメラの回転速度を腰だめと同じ（1:1）に保つと、<strong>画面上の敵の見かけの移動スピードは何倍にも跳ね上がってしまい、1ピクセルの微細な照準修正が物理的に不可能</strong>になります。
+                  </div>
+                </div>
+
+                <p class="docs-p">
+                  したがって、ADS時には<strong>「視野角が狭くなった比率に応じて、カメラの回転角速度を遅くする（感度を下げる）」</strong>必要があります。これが感度スケーリングです。
+                </p>
+
+                <!-- SVG Diagram 3b: 360°一致破綻のメカニズム -->
+                <div class="docs-diagram-card">
+                  <svg class="docs-diagram-svg" viewBox="0 0 720 200">
+                    <!-- Case A: 腰だめ (Hipfire) -->
+                    <g transform="translate(15, 15)">
+                      <rect width="210" height="120" rx="6" fill="rgba(0,0,0,0.06)" stroke="#8b949e" stroke-width="1.5"/>
+                      <circle cx="50" cy="60" r="5" fill="#ff007f"/>
+                      <text x="35" y="42" fill="#ff007f" font-size="10">開始位置</text>
+                      <!-- 敵 -->
+                      <circle cx="160" cy="60" r="7" fill="#00f2fe"/>
+                      <text x="145" y="42" fill="#00f2fe" font-size="10">標的(敵)</text>
+                      <!-- マウス移動矢印 -->
+                      <line x1="50" y1="60" x2="160" y2="60" stroke="#00f2fe" stroke-width="2.5" stroke-dasharray="3,3"/>
+                      <polygon points="158,56 164,60 158,64" fill="#00f2fe"/>
+                      <text x="105" y="80" text-anchor="middle" fill="currentColor" font-size="10.5">マウス移動：5cm</text>
+                      <text x="105" y="145" text-anchor="middle" fill="currentColor" font-weight="bold" font-size="11.5">① 腰だめ (標準FOV)</text>
+                      <text x="105" y="162" text-anchor="middle" fill="#00f2fe" font-size="10">5cmでジャスト照準！</text>
+                    </g>
+
+                    <!-- Case B: 4x スコープ (360°一致で放置) -->
+                    <g transform="translate(255, 15)">
+                      <rect width="210" height="120" rx="6" fill="rgba(255, 0, 127, 0.05)" stroke="#ff007f" stroke-width="2"/>
+                      <circle cx="50" cy="60" r="5" fill="#ff007f"/>
+                      <text x="35" y="42" fill="#ff007f" font-size="10">開始位置</text>
+                      <!-- スコープ枠内の敵 -->
+                      <circle cx="85" cy="60" r="14" fill="#00f2fe" opacity="0.4"/>
+                      <text x="75" y="32" fill="#00f2fe" font-size="10">拡大された敵</text>
+                      <!-- 暴走矢印 (画面外へ突き抜ける) -->
+                      <line x1="50" y1="60" x2="205" y2="60" stroke="#ff007f" stroke-width="3"/>
+                      <polygon points="202,55 208,60 202,65" fill="#ff007f"/>
+                      <text x="125" y="80" text-anchor="middle" fill="#ff007f" font-size="10.5">同じ5cm移動で超大暴走！</text>
+                      <text x="105" y="145" text-anchor="middle" fill="#ff007f" font-weight="bold" font-size="11.5">② 4x スコープ（360°一致）</text>
+                      <text x="105" y="162" text-anchor="middle" fill="#ff007f" font-size="10">画面外へ4画面分オーバーシュート！</text>
+                    </g>
+
+                    <!-- Case C: 4x スコープ (MD%感度スケーリング) -->
+                    <g transform="translate(495, 15)">
+                      <rect width="210" height="120" rx="6" fill="rgba(0, 242, 254, 0.05)" stroke="#00f2fe" stroke-width="2"/>
+                      <circle cx="50" cy="60" r="5" fill="#ff007f"/>
+                      <text x="35" y="42" fill="#ff007f" font-size="10">開始位置</text>
+                      <!-- 拡大された敵 -->
+                      <circle cx="160" cy="60" r="14" fill="#ffd000"/>
+                      <text x="135" y="32" fill="#ffd000" font-size="10">拡大された敵</text>
+                      <!-- 適切に減速された移動 -->
+                      <line x1="50" y1="60" x2="160" y2="60" stroke="#ffd000" stroke-width="2.5" stroke-dasharray="3,3"/>
+                      <polygon points="158,56 164,60 158,64" fill="#ffd000"/>
+                      <text x="105" y="80" text-anchor="middle" fill="currentColor" font-size="10.5">マウス移動：5cm（感度1/4に調整）</text>
+                      <text x="105" y="145" text-anchor="middle" fill="#ffd000" font-weight="bold" font-size="11.5">③ 4x スコープ（MD%同期）</text>
+                      <text x="105" y="162" text-anchor="middle" fill="#ffd000" font-size="10">手首の感覚が腰だめと完全一致！</text>
+                    </g>
+                  </svg>
+                  <span class="docs-diagram-caption">【図3b】「360°一致」がADSで大失敗する理由。画角が狭い（高倍率）状態で同じ角度回転させると、画面上では標的を猛烈に飛び越えてしまうため、視野角に応じた減速（MD%）が不可欠となる。</span>
+                </div>
+              </section>
+
+              <!-- 4.2 -->
+              <section class="docs-section" id="doc-4-2">
+                <h3 class="docs-sec-title">4.2 モニターディスタンス（MD%）の幾何学的定義</h3>
+                <p class="docs-p">
+                  では、どれくらい感度を下げれば「腰だめと同じ感覚」になるのでしょうか？<br>
+                  ここで登場するのが<strong>モニターディスタンス（Monitor Distance, MD%）</strong>です。
+                </p>
+                <p class="docs-p">
+                  モニターディスタンスとは、<strong>「画面の中心（クロスヘア）から画面端までの距離のうち、特定の $c$ % の位置にいる敵へフリックするときの手首・腕のマウス移動距離を完全に一致させる」</strong>というスケーリング手法です。
+                </p>
+
+                <!-- SVG Diagram 3: MD% 位置関係 -->
+                <div class="docs-diagram-card">
+                  <svg class="docs-diagram-svg" viewBox="0 0 700 160">
+                    <rect width="700" height="160" fill="transparent"/>
+                    <!-- 16:9 モニター枠 -->
+                    <rect x="50" y="20" width="600" height="120" rx="8" fill="none" stroke="#8b949e" stroke-width="2"/>
+                    <text x="60" y="40" fill="#8b949e" font-size="12">16:9 モニター全画面</text>
+
+                    <!-- 中心線 (クロスヘア) -->
+                    <line x1="350" y1="20" x2="350" y2="140" stroke="#ff007f" stroke-width="2" stroke-dasharray="3,3"/>
+                    <circle cx="350" cy="80" r="5" fill="#ff007f"/>
+                    <text x="325" y="105" fill="#ff007f" font-weight="bold" font-size="13">0% (中心)</text>
+
+                    <!-- 4:3 枠 (75%) -->
+                    <line x1="575" y1="20" x2="575" y2="140" stroke="#ffd000" stroke-width="2"/>
+                    <line x1="125" y1="20" x2="125" y2="140" stroke="#ffd000" stroke-width="2"/>
+                    <text x="545" y="105" fill="#ffd000" font-weight="bold" font-size="13">75% (4:3端)</text>
+
+                    <!-- 16:9 画面端 (100%) -->
+                    <circle cx="650" cy="80" r="4" fill="#00f2fe"/>
+                    <text x="600" y="105" fill="#00f2fe" font-weight="bold" font-size="13">100% (端)</text>
+
+                    <!-- 距離矢印 -->
+                    <line x1="350" y1="60" x2="575" y2="60" stroke="#ffd000" stroke-width="2"/>
+                    <text x="430" y="52" fill="#ffd000" font-size="12">c = 0.75 (MD 75%)</text>
+                    <line x1="350" y1="35" x2="650" y2="35" stroke="#00f2fe" stroke-width="2"/>
+                    <text x="470" y="30" fill="#00f2fe" font-size="12">c = 1.00 (MD 100%)</text>
+                  </svg>
+                  <span class="docs-diagram-caption">【図3】画面中心（0%）から画面端（100%）までのモニターディスタンス（MD%）位置。</span>
+                </div>
+              </section>
+
+              <!-- 4.3 -->
+              <section class="docs-section" id="doc-4-3">
+                <h3 class="docs-sec-title">4.3 【完全数学導出】MD%感度倍率公式の導出</h3>
+                <p class="docs-p">
+                  高校数学の三角関数を使って、モニターディスタンス公式をゼロから厳密に導出してみましょう。
+                </p>
+                <p class="docs-p">
+                  <strong>【ステップ 1：目標地点の画面上距離 $x$】</strong><br>
+                  画面半幅を $W/2$ とすると、MD $c$ % （$c = \text{percent}/100$）の画面上の位置 $x$ は：
+                  $$x = c \cdot \frac{W}{2}$$
+                  第2章で導いたカメラ幾何 $\frac{W/2}{f} = \tan(\theta/2)$ より、画面上の距離 $x$ に対応する画面角度 $\theta'$ は次のように書けます：
+                  $$\tan(\theta') = \frac{x}{f} = c \cdot \frac{W/2}{f} = c \cdot \tan\left(\frac{\theta}{2}\right)$$
+                  $$\therefore \theta' = \arctan\left( c \cdot \tan\left(\frac{\theta}{2}\right) \right)$$
+                </p>
+                <p class="docs-p">
+                  <strong>【ステップ 2：マウス移動量 $d$ と回転角の比例関係】</strong><br>
+                  マウスの移動量 $d$ とカメラの回転角は比例します。360°回転距離を $cm_{360}$、感度を $S$ とすると、$d \propto \frac{\theta'}{S}$ です。<br>
+                  腰だめ時（Hip）とADS時で、目標位置 $c$ までのマウス移動量 $d$ が等しくなる条件は：
+                  $$\frac{\theta'_{\text{Hip}}}{S_{\text{Hip}}} = \frac{\theta'_{\text{ADS}}}{S_{\text{ADS}}}$$
+                </p>
+                <p class="docs-p">
+                  <strong>【ステップ 3：感度倍率比の完成】</strong><br>
+                  これを変形して感度倍率比 $S_{\text{ratio}} = \frac{S_{\text{ADS}}}{S_{\text{Hip}}}$ を求めると、世界中のFPSコンバーターで使われている<strong>統一MD公式</strong>が誕生します：
+                </p>
+
+                <!-- コア公式カード -->
+                <div class="docs-formula-card" style="border-color: var(--pink);">
+                  <div class="docs-formula-header">
+                    <span class="docs-formula-title" style="color: var(--pink);">★ モニターディスタンス（MD%）感度倍率公式</span>
+                    <span class="docs-sidebar-badge" style="background: rgba(255, 0, 127, 0.15); color: var(--pink); border-color: rgba(255, 0, 127, 0.35);">世界標準</span>
+                  </div>
+                  <div class="docs-formula-display">
+                    $$S_{\text{ratio}} = \frac{\arctan\left(c \cdot \tan\left(\frac{\theta_{\text{ADS}}}{2}\right)\right)}{\arctan\left(c \cdot \tan\left(\frac{\theta_{\text{Hip}}}{2}\right)\right)}$$
+                  </div>
+                  <div class="docs-formula-vars">
+                    <span><code>c</code>: 一致させたい画面位置比率 (例: 0% → 0, 75% → 0.75, 100% → 1.0)</span>
+                    <span><code>θ_Hip</code>: 腰だめの視野角 (rad)</span>
+                    <span><code>θ_ADS</code>: ADS時の視野角 (rad)</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- 4.4 -->
+              <section class="docs-section" id="doc-4-4">
+                <h3 class="docs-sec-title">4.4 MD 0% の極限：なぜロピタルの定理で焦点距離比になるのか？</h3>
+                <p class="docs-p">
+                  ネット上の一部ブログ等では「MD 0%は0を代入すると0で割るから計算できないので0.0000000001を入れる」と説明されていることがありますが、<strong>これは数学的に誤りです</strong>。
+                </p>
+                <p class="docs-p">
+                  $c = 0$ を代入すると、分子も分母も $\arctan(0) = 0$ となり、高校数学でおなじみの<strong>「不定形 $\frac{0}{0}$」</strong>になります。
+                  そこで、$c \to 0$ の極限を<strong>ロピタルの定理（L'Hôpital's Rule）</strong>を用いて分子・分母を $c$ で微分してみましょう：
+                </p>
+
+                <div class="docs-formula-card">
+                  <div style="font-size: 0.92rem; color: var(--text-dim); margin-bottom: 6px;">
+                    【極限の導出】不定形 $\frac{0}{0}$ にロピタルの定理を適用：
+                  </div>
+                  <div class="docs-formula-display">
+                    $$\lim_{c \to 0} S_{\text{ratio}} = \lim_{c \to 0} \frac{\frac{d}{dc} \arctan(c \cdot \tan(\theta_{\text{ADS}}/2))}{\frac{d}{dc} \arctan(c \cdot \tan(\theta_{\text{Hip}}/2))}$$
+                  </div>
+                  <div style="font-size: 0.92rem; color: var(--text-dim); margin: 6px 0;">
+                    合成関数の微分公式 $\frac{d}{dc} \arctan(k \cdot c) = \frac{k}{1 + (k \cdot c)^2}$ を適用：
+                  </div>
+                  <div class="docs-formula-display">
+                    $$= \lim_{c \to 0} \frac{\frac{\tan(\theta_{\text{ADS}}/2)}{1 + c^2 \tan^2(\theta_{\text{ADS}}/2)}}{\frac{\tan(\theta_{\text{Hip}}/2)}{1 + c^2 \tan^2(\theta_{\text{Hip}}/2)}} = \mathbf{\frac{\tan(\theta_{\text{ADS}}/2)}{\tan(\theta_{\text{Hip}}/2)}}$$
+                  </div>
+                </div>
+
+                <div class="docs-callout docs-callout-tip">
+                  <span class="docs-callout-icon">💡</span>
+                  <div>
+                    <strong>驚くべき数学的帰結（Focal Length Scaling）：</strong><br>
+                    $\frac{\tan(\theta_{\text{ADS}}/2)}{\tan(\theta_{\text{Hip}}/2)}$ は、第2章で学んだ通り<strong>「焦点距離の比（ズーム倍率の逆数 $1/M$）」そのもの</strong>です！<br>
+                    つまり、<strong>MD 0% とは「クロスヘアの無限小近傍における微小な追いエイム速度を、焦点距離比（光学倍率）で1:1完全一致させる」</strong>という極めて合理的で美しい物理的意味を持っています。
+                  </div>
+                </div>
+              </section>
+
+              <!-- 4.5 -->
+              <section class="docs-section" id="doc-4-5">
+                <h3 class="docs-sec-title">4.5 MDH（水平基準）と MDV（垂直基準）の違いと、BF「133%」の正体</h3>
+                <p class="docs-p">
+                  モニターディスタンスには、基準とする軸によって2種類あります：
+                </p>
+                <p class="docs-p">
+                  ・<strong>MDH（Horizontal）</strong>：画面の「水平半幅（中心から左右端）」を100%とする。<br>
+                  ・<strong>MDV（Vertical）</strong>：画面の「垂直半高（中心から上下端）」を100%とする。<br>
+                </p>
+                <p class="docs-p">
+                  16:9モニターにおいて、水平と垂直は $16:9$ の比率です。したがって、両者のパーセンテージには次の換算式が成り立ちます：
+                  $$\text{MDV} = \text{MDH} \times \frac{16}{9}$$
+                </p>
+                <div class="docs-analogy-box">
+                  <div class="docs-analogy-header">
+                    <span>🔍</span>
+                    <span>Battlefieldの統一照準（USA）のデフォルト「133%」の謎</span>
+                  </div>
+                  <div class="docs-analogy-content">
+                    「なぜBFの統一照準は133%なんてキリの悪い数字がデフォルトなのか？」と長年疑問だった人も多いはずです。<br>
+                    BFは<strong>垂直基準（MDV）</strong>を採用しています。ここで、昔の4:3画面の端（MDH 75%）を代入してみると：
+                    $$\text{MDV} = 75\% \times \frac{16}{9} = \frac{3}{4} \times \frac{16}{9} = \frac{4}{3} = \mathbf{133.33\%}$$
+                    つまり、<strong>「16:9画面の中に、昔の4:3CRTモニターの画面端（MDH 75%）を再現している」</strong>というのが133%の正体です。
+                  </div>
+                </div>
+              </section>
+
+              <!-- 4.6 -->
+              <section class="docs-section" id="doc-4-6">
+                <h3 class="docs-sec-title">4.6 画面端（100%）に合わせると近距離フリックはどうなる？（トレードオフの真相）</h3>
+                <p class="docs-p">
+                  下のリアルタイム誤差アナライザーのグラフを見ると一目瞭然ですが、画面端（100%）で手の移動量を一致させると、<strong>画面中央付近（0%〜50%）では手の動かし量に対して照準が速く動きすぎます（プラスの誤差）</strong>。<br>
+                  そのため、クロスヘアのすぐ横に敵が出たときに「行き過ぎて外す（オーバーシュート）」傾向が生じます。
+                </p>
+
+                <!-- 例えボックス: ゴムシートのピン留め -->
+                <div class="docs-analogy-box">
+                  <div class="docs-analogy-header">
+                    <span>💡</span>
+                    <span>直感的な例え：伸縮するゴムシートのピン留め</span>
+                  </div>
+                  <div class="docs-analogy-content">
+                    伸び縮みするゴムシートを壁に留めるときをイメージしてください。<br>
+                    ・<strong>MD 0%（中心ピン留め）</strong>：ど真ん中をピンで留める。中心のズレは完全ゼロですが、外側へ向かうほどゴムが引っ張られて重く感じます（アンダーシュート）。<br>
+                    ・<strong>MD 100%（四隅ピン留め）</strong>：外側の枠をピンで留める。画面端のフリックは完璧ですが、中心付近がたわんで速すぎます（オーバーシュート）。<br>
+                    ・<strong>MD 75%（中庸ピン留め）</strong>：四隅より少し内側（4:3画面端）で留める。中央のズレをわずか数%に抑えつつ、外側の重さも防ぐ最もバランスの取れた黄金比です。
+                  </div>
+                </div>
+
+                <!-- MD%フリック誤差アナライザー (Vector SVG High-Res Plot) -->
+                <div class="docs-analyzer-card" id="figure4-card">
+                  <div class="docs-analyzer-header">
+                    <div class="docs-analyzer-title-group">
+                      <span class="docs-analyzer-icon">📈</span>
+                      <strong class="docs-analyzer-title">【図4】MD%設定による画面全域の感度誤差曲線（フリック誤差アナライザー）</strong>
+                    </div>
+                    <span class="docs-sidebar-badge" style="color: var(--cyan); border-color: rgba(0, 242, 254, 0.4);">理論計算プロット (-30% 〜 +35%)</span>
+                  </div>
+
+                  <div class="docs-analyzer-graph-wrap">
+                    <svg viewBox="0 0 840 450" class="docs-analyzer-svg" xmlns="http://www.w3.org/2000/svg">
+                      <!-- defs -->
+                      <defs>
+                        <linearGradient id="gridGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.9"/>
+                          <stop offset="100%" stop-color="#4facfe" stop-opacity="0.9"/>
+                        </linearGradient>
+                      </defs>
+
+                      <!-- 背景 -->
+                      <rect x="0" y="0" width="840" height="450" rx="8" class="graph-bg"/>
+
+                      <!-- 上部凡例バー (Legend) -->
+                      <g class="graph-legend" transform="translate(60, 22)">
+                        <!-- MD 0% -->
+                        <rect x="0" y="0" width="14" height="4" rx="2" fill="#00f2fe"/>
+                        <text x="20" y="6" fill="#00f2fe" font-size="10.5" font-weight="bold">MD 0% (Apex / 焦点距離)</text>
+
+                        <!-- MD 75% -->
+                        <rect x="200" y="0" width="14" height="4" rx="2" fill="#ffd000"/>
+                        <text x="220" y="6" fill="#ffd000" font-size="10.5" font-weight="bold">MD 75% (CS2 / 4:3端・黄金比)</text>
+
+                        <!-- MD 100% -->
+                        <rect x="425" y="0" width="14" height="4" rx="2" fill="#00ff88"/>
+                        <text x="445" y="6" fill="#00ff88" font-size="10.5" font-weight="bold">MD 100% (VALORANT / 16:9端)</text>
+
+                        <!-- 360° -->
+                        <rect x="640" y="0" width="14" height="4" rx="2" fill="#ff007f"/>
+                        <text x="660" y="6" fill="#ff007f" font-size="10.5" font-weight="bold">360°一致 (破綻)</text>
+                      </g>
+
+                      <!-- 360°回転一致の暴走警告バッジ (右上部空きスペース) -->
+                      <g transform="translate(420, 34)">
+                        <rect x="0" y="0" width="360" height="18" rx="9" fill="rgba(255, 0, 127, 0.15)" stroke="#ff007f" stroke-width="1"/>
+                        <text x="180" y="13" text-anchor="middle" fill="#ff007f" font-size="10" font-weight="bold">▲ 360°一致: 誤差+100%〜+166%（上枠外へ暴走・実用破綻）</text>
+                      </g>
+
+                      <!-- グリッド横線 (Y軸: -30% 〜 +30%) -->
+                      <!-- +30%: y=79.6 -->
+                      <line x1="70" y1="79.6" x2="790" y2="79.6" class="grid-line"/>
+                      <text x="62" y="83" text-anchor="end" class="axis-text" font-size="10">+30%</text>
+
+                      <!-- +20%: y=128.8 -->
+                      <line x1="70" y1="128.8" x2="790" y2="128.8" class="grid-line"/>
+                      <text x="62" y="132" text-anchor="end" class="axis-text" font-size="10">+20%</text>
+
+                      <!-- +10%: y=178.1 -->
+                      <line x1="70" y1="178.1" x2="790" y2="178.1" class="grid-line"/>
+                      <text x="62" y="181" text-anchor="end" class="axis-text" font-size="10">+10%</text>
+
+                      <!-- 0% 基準線 (超重要・強調) y=227.3 -->
+                      <line x1="70" y1="227.3" x2="790" y2="227.3" stroke="url(#gridGlow)" stroke-width="2"/>
+                      <text x="62" y="231" text-anchor="end" fill="#00f2fe" font-size="11" font-weight="bold">±0%</text>
+
+                      <!-- -10%: y=276.5 -->
+                      <line x1="70" y1="276.5" x2="790" y2="276.5" class="grid-line"/>
+                      <text x="62" y="280" text-anchor="end" class="axis-text" font-size="10">-10%</text>
+
+                      <!-- -20%: y=325.8 -->
+                      <line x1="70" y1="325.8" x2="790" y2="325.8" class="grid-line"/>
+                      <text x="62" y="329" text-anchor="end" class="axis-text" font-size="10">-20%</text>
+
+                      <!-- -30%: y=375.0 -->
+                      <line x1="70" y1="375.0" x2="790" y2="375.0" class="grid-line"/>
+                      <text x="62" y="378" text-anchor="end" class="axis-text" font-size="10">-30%</text>
+
+                      <!-- 縦グリッド線 (X軸: 0%, 25%, 50%, 75%, 100%) -->
+                      <!-- 0%: x=70 -->
+                      <line x1="70" y1="55" x2="70" y2="375" class="grid-line-bold"/>
+                      <text x="70" y="394" text-anchor="middle" class="axis-text" font-size="11" font-weight="bold">0% (中心)</text>
+
+                      <!-- 25%: x=250 -->
+                      <line x1="250" y1="55" x2="250" y2="375" class="grid-line"/>
+                      <text x="250" y="394" text-anchor="middle" class="axis-text" font-size="11">25%</text>
+
+                      <!-- 50%: x=430 -->
+                      <line x1="430" y1="55" x2="430" y2="375" class="grid-line"/>
+                      <text x="430" y="394" text-anchor="middle" class="axis-text" font-size="11">50%</text>
+
+                      <!-- 75%: x=610 (CS2 / 4:3端 基準ガイド) -->
+                      <line x1="610" y1="55" x2="610" y2="375" stroke="#ffd000" stroke-width="1.2" stroke-dasharray="4,3" stroke-opacity="0.6"/>
+                      <text x="610" y="394" text-anchor="middle" fill="#ffd000" font-size="11" font-weight="bold">75% (4:3端)</text>
+
+                      <!-- 100%: x=790 (VALORANT / 16:9端 基準ガイド) -->
+                      <line x1="790" y1="55" x2="790" y2="375" stroke="#00ff88" stroke-width="1.2" stroke-dasharray="4,3" stroke-opacity="0.6"/>
+                      <text x="790" y="394" text-anchor="middle" fill="#00ff88" font-size="11" font-weight="bold">100% (16:9端)</text>
+
+                      <!-- X軸タイトル -->
+                      <text x="430" y="420" text-anchor="middle" class="axis-title" font-size="11">画面中心からの物理距離 (0% = クロスヘア直上 ───→ 75% = 4:3端 ───→ 100% = 16:9ディスプレイ端)</text>
+
+                      <!-- Y軸タイトル -->
+                      <text x="18" y="215" text-anchor="middle" class="axis-title" font-size="11" transform="rotate(-90 18 215)">フリック感度誤差 (%) [上: 速すぎ / 下: 重すぎ]</text>
+
+                      <!-- 曲線 1: MD 0% (水色) -->
+                      <path d="M 70.0,227.3 88.0,227.5 106.0,227.9 124.0,228.7 142.0,229.8 160.0,231.2 178.0,232.8 196.0,234.7 214.0,236.9 232.0,239.3 250.0,241.9 268.0,244.8 286.0,247.8 304.0,251.0 322.0,254.3 340.0,257.8 358.0,261.4 376.0,265.1 394.0,268.8 412.0,272.6 430.0,276.5 448.0,280.4 466.0,284.3 484.0,288.3 502.0,292.2 520.0,296.2 538.0,300.1 556.0,304.0 574.0,307.8 592.0,311.7 610.0,315.5 628.0,319.2 646.0,322.9 664.0,326.5 682.0,330.1 700.0,333.7 718.0,337.1 736.0,340.5 754.0,343.9 772.0,347.2 790.0,350.4" fill="none" stroke="#00f2fe" stroke-width="3.5" stroke-linecap="round"/>
+                      <!-- MD 0% の交差ポイント (0%, 0%) -->
+                      <circle cx="70" cy="227.3" r="5.5" fill="#00f2fe"/>
+                      <circle cx="70" cy="227.3" r="9" fill="none" stroke="#00f2fe" stroke-width="1.5" stroke-opacity="0.5"/>
+                      <text x="86" y="215" fill="#00f2fe" font-size="10.5" font-weight="bold">MD 0%: 中心誤差 0% (微小追いエイム完全一致)</text>
+                      <!-- MD 0% の端点 (100%, -25.0%) -->
+                      <circle cx="790" cy="350.4" r="5" fill="#00f2fe"/>
+                      <text x="780" y="345" text-anchor="end" fill="#00f2fe" font-size="10.5" font-weight="bold">-25.0% (画面端で重くアンダーシュート)</text>
+
+                      <!-- 曲線 2: MD 75% (金色) -->
+                      <path d="M 70.0,119.9 88.0,120.1 106.0,120.7 124.0,121.6 142.0,122.9 160.0,124.6 178.0,126.6 196.0,129.0 214.0,131.6 232.0,134.5 250.0,137.8 268.0,141.2 286.0,144.9 304.0,148.8 322.0,152.8 340.0,157.1 358.0,161.4 376.0,165.9 394.0,170.5 412.0,175.1 430.0,179.8 448.0,184.6 466.0,189.4 484.0,194.2 502.0,199.0 520.0,203.8 538.0,208.6 556.0,213.3 574.0,218.0 592.0,222.7 610.0,227.3 628.0,231.9 646.0,236.4 664.0,240.8 682.0,245.2 700.0,249.5 718.0,253.7 736.0,257.9 754.0,261.9 772.0,265.9 790.0,269.8" fill="none" stroke="#ffd000" stroke-width="3.5" stroke-linecap="round"/>
+                      <!-- MD 75% の交差ポイント (75%, 0%) -->
+                      <circle cx="610" cy="227.3" r="6" fill="#ffd000"/>
+                      <circle cx="610" cy="227.3" r="10" fill="none" stroke="#ffd000" stroke-width="1.5" stroke-opacity="0.5"/>
+                      <text x="610" y="246" text-anchor="middle" fill="#ffd000" font-size="10.5" font-weight="bold">★ MD 75%: 4:3端で誤差 0% (全域平坦)</text>
+                      <!-- MD 75% の始点と終点 -->
+                      <text x="86" y="112" fill="#ffd000" font-size="10.5">MD 75%: 中央 +21.8%</text>
+                      <text x="780" y="285" text-anchor="end" fill="#ffd000" font-size="10.5">-8.6% (端のズレ)</text>
+
+                      <!-- 曲線 3: MD 100% (緑色) -->
+                      <path d="M 70.0,63.2 88.0,63.4 106.0,64.0 124.0,65.1 142.0,66.5 160.0,68.3 178.0,70.5 196.0,73.1 214.0,76.0 232.0,79.2 250.0,82.7 268.0,86.5 286.0,90.5 304.0,94.8 322.0,99.2 340.0,103.9 358.0,108.6 376.0,113.5 394.0,118.5 412.0,123.6 430.0,128.8 448.0,134.0 466.0,139.2 484.0,144.5 502.0,149.8 520.0,155.0 538.0,160.2 556.0,165.4 574.0,170.6 592.0,175.7 610.0,180.8 628.0,185.7 646.0,190.7 664.0,195.5 682.0,200.3 700.0,205.0 718.0,209.6 736.0,214.2 754.0,218.6 772.0,223.0 790.0,227.3" fill="none" stroke="#00ff88" stroke-width="3.5" stroke-linecap="round"/>
+                      <!-- MD 100% の交差ポイント (100%, 0%) -->
+                      <circle cx="790" cy="227.3" r="5.5" fill="#00ff88"/>
+                      <circle cx="790" cy="227.3" r="9" fill="none" stroke="#00ff88" stroke-width="1.5" stroke-opacity="0.5"/>
+                      <text x="775" y="212" text-anchor="end" fill="#00ff88" font-size="10.5" font-weight="bold">MD 100%: 16:9端で誤差 0%</text>
+                      <!-- MD 100% の始点 -->
+                      <circle cx="70" cy="63.2" r="5" fill="#00ff88"/>
+                      <text x="86" y="55" fill="#00ff88" font-size="10.5" font-weight="bold">MD 100%: 中央で+33.3%（オーバーシュート）</text>
+                    </svg>
+                  </div>
+
+                  <span class="docs-diagram-caption">【図4】MD%設定による画面全域の感度誤差曲線。MD 100%は中央で速すぎ、MD 0%は端で重すぎる。MD 75%は全体誤差が最も平坦になる。</span>
+
+                  <div class="docs-analyzer-footer">
+                    <div class="docs-analyzer-guide-title">📊 グラフの見方と4本の誤差曲線の本質</div>
+                    <p class="docs-analyzer-note">
+                      ・<strong>誤差 ±0% の横基準ライン（水色に光るライン）と交差する点</strong>が、腰だめ時と「完全に同じ手の動かし量で敵にエイムが止まる画面位置」です。<br>
+                      ・<strong style="color: var(--cyan);">MD 0% (水色)</strong>: クロスヘア至近で誤差ゼロ（微小な追いエイムに最適。画面端へ向かうほどマイナスの誤差＝手首の動かし量が足りず重く感じる）。<br>
+                      ・<strong style="color: #ffd000;">MD 75% (金色)</strong>: 4:3画面端（画面の75%位置）で誤差ゼロ（中央のズレをわずか数%に抑えつつ、画面全域での最大誤差が最も小さく平坦な黄金比）。<br>
+                      ・<strong style="color: #00ff88;">MD 100% (緑色)</strong>: 16:9画面端で誤差ゼロ（画面端の敵へフリックするとき完全一致するが、中央付近で+33%速く飛びすぎるオーバーシュート傾向）。<br>
+                      ・<strong style="color: #ff007f;">360°回転一致 (ピンク)</strong>: 画面端で100%〜166%まで大暴走し、スナイパーでの実用エイムは完全に破綻します。
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </article>
+
+            <!-- ============================================================
+                 第5章: 主要FPSタイトルのADS感度仕様
+                 ============================================================ -->
+            <article class="docs-chapter" id="doc-ch5">
+              <div class="docs-ch-header">
+                <span class="docs-ch-badge">CHAPTER 05</span>
+                <h2 class="docs-ch-title">主要FPSタイトルのADS感度仕様と移行ガイド</h2>
+              </div>
+
+              <!-- 5.1 -->
+              <section class="docs-section" id="doc-5-1">
+                <h3 class="docs-sec-title">5.1 VALORANT：なぜスナイパーが速く感じるのか？（MD 100%）</h3>
+                <p class="docs-p">
+                  VALORANTのスコープ感度倍率デフォルト `1.0` は、実質的に<strong>MD 100%（16:9画面端一致）</strong>に設定されています。<br>
+                  画面端の敵へフリックするときに手の移動量が一致する設計になっているため、画面中央付近で敵の頭をマイクロアジャスト（微小エイム）しようとすると、<strong>「感度が高すぎて敵を通り越してしまう（オーバーシュート）」</strong>感覚になりやすいのが特徴です。<br>
+                  当アプリの「VALORANT」タブを使えば、MD 75%やMD 0%に合わせた推奨感度倍率（例：0.84〜0.90付近）を一発で逆引きできます。
+                </p>
+              </section>
+
+              <!-- 5.2 -->
+              <section class="docs-section" id="doc-5-2">
+                <h3 class="docs-sec-title">5.2 Apex Legends：なぜADSが他ゲーより重く感じるのか？（MD 0%）</h3>
+                <p class="docs-p">
+                  Apex Legendsは、Respawn Entertainmentの伝統（Titanfall系）により、ゲーム内仕様が<strong>MD 0%（光学倍率割り）</strong>で作られています。<br>
+                  クロスヘア付近の追いエイム（トラッキング）は最高に快適ですが、画面端に敵が現れたときにフリックすると<strong>「手の動かし量が足りずに手前で止まる（アンダーシュート）」</strong>と感じやすくなります。
+                </p>
+              </section>
+
+              <!-- 5.3 -->
+              <section class="docs-section" id="doc-5-3">
+                <h3 class="docs-sec-title">5.3 CS2：黄金比 MD 75% と zoom_sensitivity_ratio</h3>
+                <p class="docs-p">
+                  CS2（CS:GO）の `zoom_sensitivity_ratio 1.0` は、伝統的に<strong>4:3画面端一致（MDH 75%）</strong>です。<br>
+                  画面の中央と端のバランスが最も良いため、多くのプロゲーマーや競技エイマーに愛されている設定です。なお、CS2でMD 0%に合わせたい場合は `zoom_sensitivity_ratio 0.818933...` に設定するのが有名です。
+                </p>
+
+                <!-- 主要タイトル一覧テーブル -->
+                <div class="docs-table-wrap" style="margin-top: 10px;">
+                  <table class="docs-table">
+                    <thead>
+                      <tr>
+                        <th>ゲームタイトル</th>
+                        <th>基準FOVタイプ</th>
+                        <th>ADSデフォルトMD%</th>
+                        <th>エイム感覚の特徴</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="docs-td-strong">VALORANT</td>
+                        <td>16:9 hFOV (103°固定)</td>
+                        <td class="docs-td-highlight">MD 100%</td>
+                        <td>画面端フリック重視。中央微小エイムはやや速め</td>
+                      </tr>
+                      <tr>
+                        <td class="docs-td-strong">Apex Legends</td>
+                        <td>4:3 hFOV (cl_fovScale)</td>
+                        <td class="docs-td-highlight">MD 0%</td>
+                        <td>中央トラッキング重視。外側フリックは重め</td>
+                      </tr>
+                      <tr>
+                        <td class="docs-td-strong">CS2 (CS:GO)</td>
+                        <td>4:3 hFOV (90°固定)</td>
+                        <td class="docs-td-highlight">MD 75%</td>
+                        <td>中距離フリックのバランス型。王道セッティング</td>
+                      </tr>
+                      <tr>
+                        <td class="docs-td-strong">Battlefield 2042 / V</td>
+                        <td>vFOV (Hor+表記)</td>
+                        <td class="docs-td-highlight">MDV 133% (=MDH 75%)</td>
+                        <td>統一照準（USA）で0%〜178%まで自由に調整可能</td>
+                      </tr>
+                      <tr>
+                        <td class="docs-td-strong">Call of Duty (MW / WZ)</td>
+                        <td>16:9 hFOV</td>
+                        <td class="docs-td-highlight">MD 133% / MD 0%</td>
+                        <td>「精確」=MD 0%、「レガシー」=旧仕様を選択可能</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <!-- 5.4 -->
+              <section class="docs-section" id="doc-5-4">
+                <h3 class="docs-sec-title">5.4 タイトル間を移行するときの実践的ステップ</h3>
+                <p class="docs-p">
+                  異なるゲーム間でエイム感覚を維持するための<strong>推奨3ステップ</strong>：
+                </p>
+                <div class="docs-p">
+                  <ol style="padding-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+                    <li><strong>ステップ1（腰だめ振り向きの一致）</strong>：まず、DPIとゲーム内感度を調整し、腰だめの「180°振り向き（cm）」を完全に一致させる。</li>
+                    <li><strong>ステップ2（実効FOVの確認）</strong>：第2章の公式または当アプリのシミュレーターで、両ゲームの実効水平FOVが何ミリ/何度ズレているかを確認する。</li>
+                    <li><strong>ステップ3（好みのMD%でADS感度を同期）</strong>：トラッキング主体のゲームなら「MD 0%」、フリック重視なら「MD 75%」を選び、スコープ倍率感度を逆算して設定する。</li>
+                  </ol>
+                </div>
+              </section>
+
+            </article>
+
+          </div>
+        </main>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="js/app.js?v=35"></script>
+</body>
+</html>

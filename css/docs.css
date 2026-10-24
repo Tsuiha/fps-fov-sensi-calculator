@@ -1,0 +1,749 @@
+/* ==========================================================================
+   FPS FOV & Sensitivity Lab - Comprehensive Documentation Styles
+   左: 目次サイドバー (TOC) | 右: 縦スクロール リーダーペイン (Docs Reader)
+   ========================================================================== */
+
+#tab-guide.active {
+  display: flex !important;
+  flex-direction: row !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.docs-layout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   左側: 目次サイドバー (Table of Contents)
+   -------------------------------------------------------------------------- */
+.docs-sidebar {
+  width: 280px;
+  min-width: 260px;
+  max-width: 320px;
+  flex-shrink: 0;
+  height: 100%;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+.docs-sidebar-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.docs-sidebar-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.docs-sidebar-icon {
+  font-size: 1.2rem;
+}
+
+.docs-sidebar-title {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+
+.docs-sidebar-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 242, 254, 0.15);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+}
+
+.docs-toc-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 10px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.docs-toc-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.docs-toc-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.docs-toc-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.toc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toc-ch-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  line-height: 1.35;
+  border-left: 3px solid transparent;
+}
+
+.toc-ch-link:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+  color: var(--cyan);
+}
+
+.toc-ch-link.active {
+  background: rgba(0, 242, 254, 0.12);
+  color: var(--cyan);
+  border-left-color: var(--cyan);
+}
+
+.toc-ch-num {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--text-muted);
+}
+
+.toc-ch-link.active .toc-ch-num {
+  background: rgba(0, 242, 254, 0.25);
+  color: var(--cyan);
+}
+
+.toc-sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 14px;
+  margin-left: 12px;
+  border-left: 1px dashed var(--border-color);
+}
+
+.toc-sub-link {
+  display: block;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-sub-link:hover {
+  color: var(--text-main);
+  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.toc-sub-link.active {
+  color: var(--cyan);
+  font-weight: 700;
+  background: rgba(0, 242, 254, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   右側: 本文リーダーペイン (Document Body)
+   -------------------------------------------------------------------------- */
+.docs-body-pane {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 30px 48px 80px;
+  background: var(--bg-dark);
+}
+
+.docs-body-pane::-webkit-scrollbar {
+  width: 8px;
+}
+
+.docs-body-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.docs-body-pane::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.docs-container {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+/* ドキュメント ヘッダーカバー */
+.docs-hero {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.docs-hero-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.docs-hero-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--accent-gradient);
+  color: #000;
+}
+
+.docs-hero-meta {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.docs-hero-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.docs-hero-lead {
+  font-size: 1.02rem;
+  color: var(--text-muted);
+  line-height: 1.75;
+}
+
+/* 章 (Chapter) */
+.docs-chapter {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  scroll-margin-top: 24px;
+  padding-top: 10px;
+  border-bottom: 1px dashed var(--border-color);
+  padding-bottom: 40px;
+}
+
+.docs-ch-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.docs-ch-badge {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 242, 254, 0.15);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  flex-shrink: 0;
+}
+
+.docs-ch-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.35;
+}
+
+/* 節 (Section) */
+.docs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scroll-margin-top: 24px;
+}
+
+.docs-sec-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.docs-sec-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  background: var(--cyan);
+  border-radius: 2px;
+}
+
+.docs-p {
+  font-size: 0.96rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+  letter-spacing: 0.015em;
+}
+
+.docs-p strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.docs-p em {
+  color: var(--cyan);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   カード & ボックス要素群 (例えボックス、数式カード、ダイアグラム、アラート)
+   -------------------------------------------------------------------------- */
+
+/* 直感的な例えボックス (Analogy Box) */
+.docs-analogy-box {
+  background: rgba(255, 208, 0, 0.06);
+  border: 1px solid rgba(255, 208, 0, 0.35);
+  border-left: 4px solid var(--yellow);
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docs-analogy-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--yellow);
+}
+
+.docs-analogy-content {
+  font-size: 0.94rem;
+  color: var(--text-main);
+  line-height: 1.75;
+}
+
+/* 数式カード (Formula Box) */
+.docs-formula-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.docs-formula-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.docs-formula-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.docs-formula-display {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 14px 18px;
+  text-align: center;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 1.25rem;
+  color: #fff;
+  letter-spacing: 0.04em;
+  overflow-x: auto;
+}
+
+.docs-formula-display .math-main {
+  font-size: 1.35rem;
+  font-weight: bold;
+}
+
+.docs-formula-display .math-sub {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.docs-formula-vars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 10px;
+}
+
+.docs-formula-vars span {
+  display: flex;
+  gap: 8px;
+}
+
+.docs-formula-vars code {
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+/* ダイアグラムカード (SVG Diagram Container) */
+.docs-diagram-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.docs-diagram-svg {
+  width: 100%;
+  max-width: 680px;
+  height: auto;
+  display: block;
+}
+
+.docs-diagram-caption {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* リアルタイム誤差アナライザーカード (Figure 4 Vector Graph) */
+.docs-analyzer-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  margin: 12px 0 16px;
+}
+
+.docs-analyzer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.docs-analyzer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.docs-analyzer-icon {
+  font-size: 1.15rem;
+}
+
+.docs-analyzer-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.docs-analyzer-graph-wrap {
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-dark);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+}
+
+.docs-analyzer-svg {
+  width: 100%;
+  max-width: 840px;
+  height: auto;
+  display: block;
+}
+
+.docs-analyzer-svg text {
+  font-family: 'JetBrains Mono', -apple-system, monospace;
+}
+
+[data-theme="light"] .docs-analyzer-svg .graph-bg {
+  fill: #f8fafc;
+}
+[data-theme="dark"] .docs-analyzer-svg .graph-bg {
+  fill: #0a0d14;
+}
+
+[data-theme="light"] .docs-analyzer-svg .grid-line {
+  stroke: rgba(0, 0, 0, 0.08);
+  stroke-width: 1;
+}
+[data-theme="dark"] .docs-analyzer-svg .grid-line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+[data-theme="light"] .docs-analyzer-svg .grid-line-bold {
+  stroke: rgba(0, 0, 0, 0.2);
+  stroke-width: 1.5;
+}
+[data-theme="dark"] .docs-analyzer-svg .grid-line-bold {
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1.5;
+}
+
+[data-theme="light"] .docs-analyzer-svg .axis-text {
+  fill: #64748b;
+}
+[data-theme="dark"] .docs-analyzer-svg .axis-text {
+  fill: rgba(255, 255, 255, 0.55);
+}
+
+[data-theme="light"] .docs-analyzer-svg .axis-title {
+  fill: #334155;
+  font-weight: 600;
+}
+[data-theme="dark"] .docs-analyzer-svg .axis-title {
+  fill: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+}
+
+.docs-analyzer-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 12px;
+}
+
+.docs-analyzer-guide-title {
+  font-size: 0.90rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+.docs-analyzer-note {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* アラート・ノートボックス */
+.docs-callout {
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.docs-callout-tip {
+  background: rgba(0, 242, 254, 0.08);
+  border-left: 4px solid var(--cyan);
+  color: var(--text-main);
+}
+
+.docs-callout-warning {
+  background: rgba(255, 0, 127, 0.08);
+  border-left: 4px solid var(--pink);
+  color: var(--text-main);
+}
+
+.docs-callout-info {
+  background: rgba(79, 172, 254, 0.08);
+  border-left: 4px solid var(--blue);
+  color: var(--text-main);
+}
+
+.docs-callout-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* テーブルスタイル */
+.docs-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+}
+
+.docs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.docs-table th {
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-main);
+  font-weight: 700;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.docs-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.docs-table tr:last-child td {
+  border-bottom: none;
+}
+
+.docs-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.docs-td-strong {
+  color: var(--text-main) !important;
+  font-weight: 700;
+}
+
+.docs-td-highlight {
+  color: var(--cyan) !important;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Light Theme Overrides for Documentation
+   -------------------------------------------------------------------------- */
+[data-theme="light"] .docs-sidebar {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .docs-sidebar-header {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .docs-body-pane {
+  background: #f8fafc;
+}
+
+[data-theme="light"] .docs-formula-card,
+[data-theme="light"] .docs-diagram-card,
+[data-theme="light"] .docs-table-wrap {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .docs-formula-display {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+[data-theme="light"] .docs-analogy-box {
+  background: #fffbeb;
+  border-color: #fde68a;
+  border-left-color: #d97706;
+}
+
+[data-theme="light"] .docs-analogy-header {
+  color: #b45309;
+}
+
+[data-theme="light"] .docs-analogy-content {
+  color: #1e293b;
+}
+
+[data-theme="light"] .docs-table th {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+[data-theme="light"] .docs-table td {
+  border-color: #f1f5f9;
+  color: #334155;
+}
+
+[data-theme="light"] .docs-callout-tip {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+[data-theme="light"] .docs-callout-warning {
+  background: #fdf2f8;
+  border-color: #db2777;
+}
+
+[data-theme="light"] .docs-callout-info {
+  background: #eff6ff;
+  border-color: #2563eb;
+}

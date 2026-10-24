@@ -1,0 +1,260 @@
+/* ==========================================================================
+   Component Specific Styles & Accordion Guides
+   ========================================================================== */
+
+/* Summary Stats Badges */
+.stats-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.stat-badge {
+  flex: 1;
+  min-width: 140px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-badge .stat-title {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.stat-badge .stat-val {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  margin-top: 4px;
+}
+
+/* Radio Group */
+.radio-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"] {
+  accent-color: var(--cyan);
+}
+
+.radio-label:hover {
+  color: var(--text-main);
+}
+
+/* Toggle / Mode Button Group */
+.toggle-btn-group {
+  display: flex;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.toggle-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.toggle-btn:hover {
+  color: var(--text-main);
+}
+
+.toggle-btn.active {
+  background: rgba(0, 242, 254, 0.18);
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+/* MD Preset Buttons */
+.md-preset-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.md-preset-btn {
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.md-preset-btn:hover {
+  color: var(--text-main);
+  border-color: rgba(0, 242, 254, 0.35);
+}
+
+.md-preset-btn.active {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+/* Target Selector Tabs */
+.target-tab-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.target-tab-btn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition);
+}
+
+.target-tab-btn .target-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.target-tab-btn.active {
+  border-color: var(--cyan);
+  color: #fff;
+  background: rgba(0, 242, 254, 0.1);
+}
+
+/* Theory & Guide Accordion */
+.guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-item {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.guide-item:hover {
+  border-color: rgba(0, 242, 254, 0.3);
+}
+
+.guide-accordion-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.guide-accordion-header h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guide-tag {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  background: rgba(0, 242, 254, 0.1);
+  color: var(--cyan);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+}
+
+.guide-tag.pitfall {
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff6b6b;
+  border-color: rgba(255, 68, 68, 0.25);
+}
+
+.accordion-arrow {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  transition: transform 0.25s ease;
+}
+
+.guide-item.open .accordion-arrow {
+  transform: rotate(180deg);
+  color: var(--cyan);
+}
+
+.guide-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0, 1, 0, 1);
+  padding: 0 20px;
+  color: #c9d1d9;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.guide-item.open .guide-body {
+  max-height: 1200px;
+  padding: 0 20px 20px 20px;
+  transition: max-height 0.4s ease-in-out;
+}
+
+.guide-body code {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--cyan);
+}
+
+.formula-box {
+  background: #090c12;
+  border-left: 3px solid var(--cyan);
+  padding: 12px 16px;
+  margin: 12px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  color: #e6edf3;
+  overflow-x: auto;
+  line-height: 1.6;
+}
