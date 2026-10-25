@@ -62,8 +62,8 @@
 html, body {
   width: 100%;
   height: 100vh;
-  max-height: 100vh;
-  overflow: hidden; /* 縦スクロールなし */
+  min-width: 1240px;
+  min-height: 680px;
   background-color: var(--bg-dark);
   color: var(--text-main);
   font-family: var(--font-sans);
@@ -71,9 +71,63 @@ html, body {
   font-size: 13.5px;
 }
 
+/* PC標準モニター（幅1240px以上 かつ 高さ680px以上）: 100vh完全固定・スクロールバーなし */
+@media (min-width: 1240px) and (min-height: 680px) {
+  html, body {
+    overflow: hidden;
+    max-height: 100vh;
+  }
+}
+
+/* 画面が小さい端末（ウィンドウ縮小時）: スクロール/パンを許可してPCレイアウトを維持 */
+@media (max-width: 1239px), (max-height: 679px) {
+  html, body {
+    overflow: auto;
+    height: auto;
+    min-height: 100vh;
+  }
+  main.app-main {
+    min-height: 680px;
+    height: auto;
+    overflow: visible;
+  }
+  .tab-content {
+    min-height: 680px;
+    height: auto;
+  }
+  .sim-4frame-layout {
+    min-height: 680px;
+    height: 680px;
+  }
+}
+
+/* スマホ・タブレット縦向き時: 縦に伸びすぎないようPCの16:9黄金比（1280x720相当）を維持 */
+@media (orientation: portrait) {
+  html, body {
+    overflow: auto !important;
+    height: auto !important;
+  }
+  main.app-main {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .tab-content {
+    height: auto !important;
+  }
+  .sim-4frame-layout {
+    height: 720px !important;
+    min-height: 720px !important;
+  }
+  #tab-guide.active,
+  .docs-layout {
+    height: 850px !important;
+  }
+}
+
 /* App Header (極小 42px・タイトル左上・フラット大タブ) */
 header.app-header {
   height: 42px;
+  min-width: 1240px;
   padding: 0 16px;
   display: flex;
   align-items: center;
@@ -211,6 +265,7 @@ header.app-header {
 main.app-main {
   height: calc(100vh - 42px);
   width: 100%;
+  min-width: 1240px;
   overflow: hidden;
   position: relative;
 }
@@ -235,14 +290,6 @@ main.app-main {
   height: 100%;
   width: 100%;
   min-height: 0;
-}
-
-@media (max-width: 900px) {
-  .sim-4frame-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    overflow-y: auto;
-  }
 }
 
 /* フレームボックス共通 */
